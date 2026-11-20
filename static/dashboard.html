@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>North Star</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0f17; --panel: #121826; --panel2: #182033; --line: #253049; --text: #e6ebf5;
+    --muted: #8a96b0; --accent: #7c9cff; --good: #3ecf8e; --bad: #ff6b6b; --warn: #f5b942;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line);
+           flex-wrap: wrap; }
+  .logo { font-weight: 700; font-size: 18px; letter-spacing: .2px; }
+  .logo span { color: var(--accent); }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill { font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .pill.live { color: var(--good); border-color: #1f5f45; }
+  .spacer { flex: 1; }
+  button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+           padding: 7px 12px; font: inherit; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #0b0f17; border-color: var(--accent); font-weight: 600; }
+  button.good { background: var(--good); color: #062417; border-color: var(--good); font-weight: 600; }
+  button.danger { color: var(--bad); }
+  main { display: grid; grid-template-columns: 300px 1fr 380px; gap: 16px; padding: 16px 20px; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .panel h2 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .bar { margin: 8px 0; }
+  .bar .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .bar .track { height: 8px; background: var(--panel2); border-radius: 4px; overflow: hidden; margin-top: 3px; }
+  .bar .fill { height: 100%; background: var(--accent); }
+  .step { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; padding: 2px 0; }
+  .step.worst { color: var(--warn); font-weight: 600; }
+  .kpi { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi div { background: var(--panel2); border-radius: 8px; padding: 8px; }
+  .kpi b { display: block; font-size: 18px; }
+  .kpi small { color: var(--muted); font-size: 11px; }
+  .exp-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .exp-head h3 { margin: 0; font-size: 18px; }
+  .status { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: var(--panel2); text-transform: uppercase; }
+  .status.running { color: var(--good); } .status.pending_approval { color: var(--warn); }
+  .status.shipped { color: var(--accent); }
+  .hyp { color: var(--muted); margin: 6px 0 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; color: var(--muted); font-weight: 500; padding: 6px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .chg { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); }
+  .pos { color: var(--good); } .neg { color: var(--bad); }
+  .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+  .badge.killed { background: #3a1518; color: var(--bad); } .badge.winner { background: #12382a; color: var(--good); }
+  .badge.live { background: #1a2540; color: var(--accent); }
+  .progress { height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; margin: 10px 0 4px; }
+  .progress div { height: 100%; background: var(--good); transition: width .5s; }
+  .memo { white-space: pre-wrap; background: var(--panel2); border-radius: 8px; padding: 12px; }
+  .memo h4 { margin: 0 0 6px; font-size: 15px; }
+  .audit { max-height: calc(100vh - 140px); overflow-y: auto; }
+  .ev { border-left: 2px solid var(--line); padding: 4px 0 10px 12px; position: relative; cursor: pointer; }
+  .ev::before { content: ""; position: absolute; left: -5px; top: 9px; width: 8px; height: 8px; border-radius: 50%;
+                background: var(--muted); }
+  .ev.guardrail_kill::before { background: var(--bad); } .ev.decide::before { background: var(--good); }
+  .ev.approve::before, .ev.launch::before { background: var(--warn); }
+  .ev.diagnose::before, .ev.design::before { background: var(--accent); }
+  .ev .top { display: flex; gap: 8px; align-items: baseline; font-size: 11px; color: var(--muted); }
+  .ev .step-name { text-transform: uppercase; letter-spacing: .06em; font-weight: 700; color: var(--text); }
+  .ev .sum { font-size: 13px; margin-top: 2px; }
+  .ev pre { display: none; white-space: pre-wrap; font-size: 11px; color: var(--muted); background: var(--panel2);
+            padding: 8px; border-radius: 6px; max-height: 300px; overflow: auto; }
+  .ev.open pre { display: block; }
+  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">&#9733; North <span>Star</span></div>
+  <div class="pills" id="pills"></div>
+  <div class="spacer"></div>
+  <button onclick="post('/api/simulator/seed', {users: 3000})">Seed baseline (3k users)</button>
+  <button id="simBtn" onclick="toggleSim()">Start traffic</button>
+  <button class="primary" onclick="runAgent(this)">&#9654; Run agent</button>
+  <a href="/acme" target="_blank">Acme site &#8599;</a>
+  <button class="danger" onclick="if(confirm('Reset all data?')) post('/api/reset')">Reset</button>
+</header>
+<main>
+  <div class="stack">
+    <div class="panel">
+      <h2>Baseline funnel</h2>
+      <div id="funnel"></div>
+      <div id="steps" style="margin-top:10px"></div>
+    </div>
+    <div class="panel">
+      <h2>Agent economics</h2>
+      <div class="kpi" id="kpi"></div>
+    </div>
+  </div>
+  <div class="stack">
+    <div class="panel" id="expPanel"><div class="empty">No experiment yet. Seed a baseline, then press <b>Run agent</b>.</div></div>
+    <div class="panel">
+      <h2>Live: primary metric by variant</h2>
+      <canvas id="chart" height="110"></canvas>
+    </div>
+    <div class="panel" id="memoPanel" style="display:none"><h2>Decision memo</h2><div id="memo"></div></div>
+  </div>
+  <div class="panel">
+    <h2>Audit trail</h2>
+    <div class="audit" id="audit"></div>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const pct = (x, d = 1) => (x * 100).toFixed(d) + "%";
+const signed = (x) => (x >= 0 ? "+" : "") + (x * 100).toFixed(1) + "%";
+let S = null, chart = null, series = {}, chartExp = null, openEvents = new Set();
+
+async function post(url, body) {
+  const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"},
+                              body: body ? JSON.stringify(body) : null});
+  if (!r.ok) alert((await r.json()).detail || r.statusText);
+  refresh();
+  return r;
+}
+async function runAgent(btn) {
+  btn.disabled = true; btn.textContent = "Thinking...";
+  await post("/api/agent/plan");
+  btn.disabled = false; btn.innerHTML = "&#9654; Run agent";
+}
+function toggleSim() { post(S && S.simulator.running ? "/api/simulator/stop" : "/api/simulator/start"); }
+
+function renderHeader() {
+  $("pills").innerHTML = Object.entries(S.integrations).map(([k, v]) =>
+    `<span class="pill ${["live"].includes(v) ? "live" : ""}">${k}: ${v}</span>`).join("");
+  $("simBtn").textContent = S.simulator.running ? "Stop traffic" : "Start traffic";
+}
+
+function renderFunnel() {
+  const b = S.baseline, n = b.users || 1;
+  const evs = ["landing_view", "signup_start", "signup_complete", "purchase"];
+  $("funnel").innerHTML = evs.map(e => `<div class="bar"><div class="lbl"><span>${S.funnel_labels[e]}</span>
+    <span>${b[e + "_users"]}</span></div><div class="track"><div class="fill" style="width:${100 * b[e + "_users"] / n}%"></div></div></div>`).join("");
+  const worst = S.baseline_steps.reduce((a, s) => (s.users && (!a || s.rate < a.rate)) ? s : a, null);
+  $("steps").innerHTML = S.baseline_steps.map(s => `<div class="step ${worst === s ? "worst" : ""}">
+    <span>${S.funnel_labels[s.from]} &rarr; ${S.funnel_labels[s.to]}</span><span>${pct(s.rate, 0)}</span></div>`).join("");
+}
+
+function renderKpi() {
+  const l = S.llm, saved = l.cost_if_all_smart_usd - l.cost_usd;
+  $("kpi").innerHTML = `
+    <div><b>${S.simulator.total_users.toLocaleString()}</b><small>simulated users</small></div>
+    <div><b>${l.calls}</b><small>model calls (${l.smart_calls} smart / ${l.fast_calls} fast)</small></div>
+    <div><b>$${l.cost_usd.toFixed(3)}</b><small>LLM spend</small></div>
+    <div><b>$${Math.max(saved, 0).toFixed(3)}</b><small>saved by routing</small></div>`;
+}
+
+function changes(params, control) {
+  return Object.entries(params).filter(([k, v]) => control[k] !== v).map(([k, v]) => `${k}=${v}`).join("<br>") || "&mdash;";
+}
+
+function renderExperiment() {
+  const e = S.current;
+  if (!e) return;
+  const spec = e.spec, control = spec.variants.find(v => v.name === "control").params;
+  const cmp = S.results ? S.results.comparisons : {}, arms = S.results ? S.results.arms : {};
+  const pm = spec.primary_metric, winner = e.result && e.result.winner;
+  const rows = spec.variants.map(v => {
+    const a = arms[v.name], c = cmp[v.name];
+    let badge = e.status === "running" ? `<span class="badge live">LIVE</span>` : "";
+    if (e.killed.includes(v.name)) badge = `<span class="badge killed">KILLED</span>`;
+    if (winner === v.name) badge = `<span class="badge winner">WINNER</span>`;
+    return `<tr><td><b>${v.name}</b> ${badge}<div class="chg">${v.name === "control" ? "current experience" : changes(v.params, control)}</div></td>
+      <td>${a ? a.users : 0}</td><td>${a ? pct(a[pm]) : "&mdash;"}</td>
+      <td class="${c ? (c.primary_lift >= 0 ? "pos" : "neg") : ""}">${c ? signed(c.primary_lift) : "&mdash;"}${c ? `<div class="chg">p=${c.primary_p.toFixed(3)}</div>` : ""}</td>
+      <td>${a ? "$" + a.revenue_per_user.toFixed(2) : "&mdash;"}</td>
+      <td class="${c ? (c.revenue_diff >= 0 ? "pos" : "neg") : ""}">${c ? signed(c.revenue_diff) : "&mdash;"}</td></tr>`;
+  }).join("");
+  const live = Object.entries(cmp).filter(([k]) => !e.killed.includes(k));
+  const minUsers = live.length ? Math.min(...live.map(([, c]) => c.users)) : 0;
+  const prog = e.status === "running" ? Math.min(100, 100 * minUsers / S.decide_users_per_arm) : (e.result ? 100 : 0);
+  $("expPanel").innerHTML = `
+    <div class="exp-head"><h3>${e.name}</h3><span class="status ${e.status}">${e.status.replace("_", " ")}</span>
+      <span class="spacer"></span>
+      ${e.status === "pending_approval" ? `<button onclick="post('/api/experiments/${e.id}/reject')">Reject</button>
+        <button class="good" onclick="post('/api/experiments/${e.id}/approve')">&#10003; Approve launch</button>` : ""}
+    </div>
+    <div class="hyp">${spec.hypothesis}<br><small>Primary: <b>${pm}</b> &middot; Guardrail: ${spec.guardrail}</small></div>
+    <table><tr><th>Variant</th><th>Users</th><th>${pm.replace("_rate", "")}</th><th>Lift</th><th>Rev/user</th><th>Rev &Delta;</th></tr>${rows}</table>
+    ${e.status !== "pending_approval" ? `<div class="progress"><div style="width:${prog}%"></div></div>
+      <small style="color:var(--muted)">Evidence collected: ${prog.toFixed(0)}% of ${S.decide_users_per_arm} users/arm needed to decide</small>` : ""}`;
+
+  if (e.result) {
+    $("memoPanel").style.display = "";
+    $("memo").innerHTML = `<div class="memo"><h4>${e.result.headline}</h4>${e.result.memo}
+      ${e.result.learnings && e.result.learnings.length ? "<br><br><b>Learnings stored in memory:</b><br>&bull; " + e.result.learnings.join("<br>&bull; ") : ""}</div>`;
+  } else $("memoPanel").style.display = "none";
+}
+
+function renderChart() {
+  const e = S.current;
+  if (!e || !S.results) return;
+  if (chartExp !== e.id) { series = {}; chartExp = e.id; if (chart) { chart.destroy(); chart = null; } }
+  const pm = e.spec.primary_metric, arms = S.results.arms;
+  const colors = ["#8a96b0", "#7c9cff", "#3ecf8e", "#f5b942", "#ff6b6b"];
+  Object.keys(arms).forEach(k => {
+    series[k] = series[k] || [];
+    const last = series[k][series[k].length - 1];
+    if (!last || last.x !== arms[k].users) series[k].push({x: arms[k].users, y: arms[k][pm] * 100});
+  });
+  const datasets = e.spec.variants.map((v, i) => ({label: v.name + (e.killed.includes(v.name) ? " (killed)" : ""),
+    data: series[v.name] || [], borderColor: colors[i % colors.length], borderWidth: 2, pointRadius: 0, tension: .3,
+    borderDash: e.killed.includes(v.name) ? [4, 4] : []}));
+  if (!chart) {
+    chart = new Chart($("chart"), {type: "line", data: {datasets}, options: {animation: false, parsing: false,
+      scales: {x: {type: "linear", title: {display: true, text: "users in arm", color: "#8a96b0"}, ticks: {color: "#8a96b0"}, grid: {color: "#253049"}},
+               y: {title: {display: true, text: pm + " (%)", color: "#8a96b0"}, ticks: {color: "#8a96b0"}, grid: {color: "#253049"}}},
+      plugins: {legend: {labels: {color: "#e6ebf5"}}}}});
+  } else { chart.data.datasets = datasets; chart.update("none"); }
+}
+
+function renderAudit() {
+  $("audit").innerHTML = S.audit.length ? S.audit.map(a => `
+    <div class="ev ${a.step} ${openEvents.has(a.id) ? "open" : ""}" onclick="toggleEv('${a.id}', this)">
+      <div class="top"><span class="step-name">${a.step.replace("_", " ")}</span>
+        <span>${new Date(a.ts * 1000).toLocaleTimeString()}</span><span>${a.actor}</span>
+        ${a.model ? `<span>${a.model}</span>` : ""}${a.cost_usd ? `<span>$${a.cost_usd.toFixed(4)}</span>` : ""}</div>
+      <div class="sum">${a.summary}</div>
+      <pre>${JSON.stringify(a.detail, null, 2).replace(/</g, "&lt;")}</pre></div>`).join("")
+    : `<div class="empty">Every agent decision will appear here, with the data behind it.</div>`;
+}
+function toggleEv(id, el) { openEvents.has(id) ? openEvents.delete(id) : openEvents.add(id); el.classList.toggle("open"); }
+
+async function refresh() {
+  try {
+    S = await (await fetch("/api/state")).json();
+    renderHeader(); renderFunnel(); renderKpi(); renderExperiment(); renderChart(); renderAudit();
+  } catch (err) { console.error(err); }
+}
+refresh(); setInterval(refresh, 1000);
+</script>
+</body>
+</html>

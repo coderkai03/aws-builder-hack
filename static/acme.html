@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acme Cloud</title>
+<style>
+  :root { --bg: #ffffff; --text: #111827; --muted: #6b7280; --accent: #4f46e5; --card: #f9fafb; --line: #e5e7eb; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; }
+  nav { padding: 18px 24px; font-weight: 700; border-bottom: 1px solid var(--line); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 16px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; }
+  @media (max-width: 760px) { .wrap { grid-template-columns: 1fr; } }
+  h1 { font-size: 40px; line-height: 1.1; margin: 0 0 14px; }
+  p.sub { color: var(--muted); font-size: 18px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+  input { width: 100%; padding: 11px 12px; margin: 6px 0; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+  button { width: 100%; margin-top: 10px; padding: 12px; border: 0; border-radius: 8px; background: var(--accent);
+           color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  .quote { margin-top: 18px; font-style: italic; color: var(--muted); border-left: 3px solid var(--accent); padding-left: 12px; }
+  .price { margin-top: 12px; font-size: 14px; color: var(--muted); }
+  .debug { position: fixed; bottom: 10px; right: 10px; font: 12px ui-monospace, monospace; background: #111827; color: #e5e7eb;
+           padding: 8px 10px; border-radius: 8px; max-width: 360px; }
+</style>
+</head>
+<body>
+<nav>&#9729; Acme Cloud</nav>
+<div class="wrap">
+  <div>
+    <h1 id="headline">Deploy containers in one click.</h1>
+    <p class="sub">Push your code, get a URL. Autoscaling, logs and rollbacks included.</p>
+    <div class="quote" id="quote" hidden>&ldquo;We moved 40 services to Acme in a weekend.&rdquo; &mdash; Priya, CTO at Lumen</div>
+  </div>
+  <div class="card">
+    <form id="form" onsubmit="event.preventDefault(); alert('Thanks! (demo)')"></form>
+    <div class="price" id="price"></div>
+  </div>
+</div>
+<div class="debug" id="debug"></div>
+<script>
+const FIELDS = [["email", "Work email"], ["password", "Password"], ["name", "Full name"], ["company", "Company"], ["phone", "Phone number"]];
+let uid = localStorage.getItem("acme_uid");
+try { if (!uid) { uid = "web_" + Math.random().toString(36).slice(2, 10); localStorage.setItem("acme_uid", uid); } } catch (e) { uid = uid || "web_demo"; }
+
+async function render() {
+  const c = await (await fetch("/api/acme/config?user_id=" + encodeURIComponent(uid))).json();
+  const p = c.params;
+  document.getElementById("headline").textContent = c.headline;
+  document.getElementById("quote").hidden = !p.show_testimonial;
+  const fields = FIELDS.slice(0, p.form_fields).map(([t, l]) =>
+    `<input type="${t === "password" ? "password" : "text"}" placeholder="${l}">`).join("");
+  const card = p.require_credit_card ? `<input placeholder="Card number">` : "";
+  document.getElementById("form").innerHTML = fields + card + `<button>${p.cta_text}</button>`;
+  document.getElementById("price").textContent = {
+    monthly: `${p.trial_days}-day free trial, then $39/month.`,
+    annual_discount: `${p.trial_days}-day free trial. Save 57% with annual billing ($199/yr).`,
+    hidden: `${p.trial_days}-day free trial.`,
+  }[p.pricing_display];
+  document.getElementById("debug").textContent = `variant: ${c.variant}  ${c.experiment_id ? "(" + c.experiment_id + ")" : "(baseline)"}`;
+}
+render(); setInterval(render, 3000);
+</script>
+</body>
+</html>
