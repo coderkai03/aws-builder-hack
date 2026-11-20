@@ -5,5 +5,4 @@ httpx>=0.27
 python-dotenv>=1.0
 pydantic>=2.7
 # Optional sponsor SDKs (install when you wire them in):
-# singlestoredb>=1.0     # SingleStore (set SINGLESTORE_URL)
-# cognee>=0.3            # Cognee memory (set COGNEE_ENABLED=1)
+singlestoredb>=1.0       # SingleStore (used when SINGLESTORE_URL is set)

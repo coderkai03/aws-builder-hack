@@ -316,8 +316,7 @@ def _decide(exp: dict, res: dict) -> dict:
         result["statsig"] = statsig.abandon(exp, "North Star: no variant beat control")
     store.update_experiment(exp["id"], status="shipped" if winner else "no_winner", result=result)
     store.audit("decide", memo.headline, result)
-    for lesson in memo.learnings:
-        memory.remember(lesson)
+    memory.remember_many(list(memo.learnings))
     store.audit("learn", f"Stored {len(memo.learnings)} learnings in memory", {"learnings": memo.learnings})
     return result
 

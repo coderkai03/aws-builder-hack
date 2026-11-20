@@ -104,7 +104,7 @@
     <div class="panel" id="expPanel"><div class="empty">No experiment yet. Seed a baseline, then press <b>Run agent</b>.</div></div>
     <div class="panel">
       <h2>Live: primary metric by variant</h2>
-      <canvas id="chart" height="110"></canvas>
+      <div style="position:relative;height:260px"><canvas id="chart"></canvas></div>
     </div>
     <div class="panel" id="memoPanel" style="display:none"><h2>Decision memo</h2><div id="memo"></div></div>
   </div>
@@ -155,7 +155,8 @@ function renderKpi() {
     <div><b>${S.simulator.total_users.toLocaleString()}</b><small>simulated users</small></div>
     <div><b>${l.calls}</b><small>model calls (${l.smart_calls} smart / ${l.fast_calls} fast)</small></div>
     <div><b>$${l.cost_usd.toFixed(3)}</b><small>LLM spend</small></div>
-    <div><b>$${Math.max(saved, 0).toFixed(3)}</b><small>saved by routing</small></div>`;
+    ${saved > 0.0001 ? `<div><b>$${saved.toFixed(3)}</b><small>saved by routing</small></div>`
+      : `<div><b>${S.amplitude.events.toLocaleString()}</b><small>events sent to Amplitude</small></div>`}`;
 }
 
 function changes(params, control) {
@@ -216,7 +217,7 @@ function renderChart() {
     data: series[v.name] || [], borderColor: colors[i % colors.length], borderWidth: 2, pointRadius: 0, tension: .3,
     borderDash: e.killed.includes(v.name) ? [4, 4] : []}));
   if (!chart) {
-    chart = new Chart($("chart"), {type: "line", data: {datasets}, options: {animation: false, parsing: false,
+    chart = new Chart($("chart"), {type: "line", data: {datasets}, options: {animation: false, parsing: false, maintainAspectRatio: false,
       scales: {x: {type: "linear", title: {display: true, text: "users in arm", color: "#8a96b0"}, ticks: {color: "#8a96b0"}, grid: {color: "#253049"}},
                y: {title: {display: true, text: pm + " (%)", color: "#8a96b0"}, ticks: {color: "#8a96b0"}, grid: {color: "#253049"}}},
       plugins: {legend: {labels: {color: "#e6ebf5"}}}}});

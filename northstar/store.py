@@ -79,9 +79,12 @@ class Store:
              e.get("variant") or "", e["device"], e["event"], e.get("value", 0.0))
             for e in events
         ]
-        self._many(
-            "INSERT INTO events (id, ts, user_id, experiment_id, variant, device, event, value) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", rows)
+        # One multi-row INSERT per chunk: SingleStore's HTTPS Data API is one round trip per statement.
+        for i in range(0, len(rows), 500):
+            chunk = rows[i:i + 500]
+            values = ", ".join(["(?, ?, ?, ?, ?, ?, ?, ?)"] * len(chunk))
+            self._exec("INSERT INTO events (id, ts, user_id, experiment_id, variant, device, event, value) "
+                       "VALUES " + values, [x for row in chunk for x in row])
 
     def funnel(self, experiment_id: str = "", device: str | None = None) -> dict:
         """Distinct users per (variant, event) plus revenue sums, for one experiment ('' = baseline)."""

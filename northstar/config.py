@@ -30,7 +30,9 @@ OPENROUTER_FAST_MODEL = _env("OPENROUTER_FAST_MODEL", "anthropic/claude-haiku-5.
 STATSIG_CONSOLE_KEY = _env("STATSIG_CONSOLE_KEY")
 AMPLITUDE_API_KEY = _env("AMPLITUDE_API_KEY")
 SINGLESTORE_URL = _env("SINGLESTORE_URL")
-COGNEE_ENABLED = _env("COGNEE_ENABLED") in ("1", "true", "yes")
+COGNEE_API_KEY = _env("COGNEE_API_KEY")
+COGNEE_BASE_URL = _env("COGNEE_BASE_URL")  # "API base URL" from platform.cognee.ai -> API Keys
+COGNEE_ENABLED = bool(COGNEE_API_KEY and COGNEE_BASE_URL)
 
 # Demo: add a stakeholder-requested "hide pricing" variant to every design so the revenue guardrail
 # visibly fires on stage. Set NORTHSTAR_DEMO_TRAP=1.
