@@ -126,5 +126,5 @@ def get_state():
         "results": results,
         "experiments": [{k: e[k] for k in ("id", "name", "status", "created_at")} for e in exps],
         "audit": store.audit_log(150),
-        "decide_users_per_arm": agent.DECIDE_USERS_PER_ARM,
+        "decide_users_per_arm": agent.MAX_USERS_PER_ARM,
     }

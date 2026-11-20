@@ -61,7 +61,7 @@ def walk(params: dict, device: str, rng: random.Random) -> list[tuple[str, float
 class Simulator:
     def __init__(self):
         self.running = False
-        self.users_per_tick = 150
+        self.users_per_tick = 400
         self.tick_seconds = 1.0
         self.total_users = 0
         self._thread: threading.Thread | None = None

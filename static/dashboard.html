@@ -191,7 +191,7 @@ function renderExperiment() {
     <div class="hyp">${spec.hypothesis}<br><small>Primary: <b>${pm}</b> &middot; Guardrail: ${spec.guardrail}</small></div>
     <table><tr><th>Variant</th><th>Users</th><th>${pm.replace("_rate", "")}</th><th>Lift</th><th>Rev/user</th><th>Rev &Delta;</th></tr>${rows}</table>
     ${e.status !== "pending_approval" ? `<div class="progress"><div style="width:${prog}%"></div></div>
-      <small style="color:var(--muted)">Evidence collected: ${prog.toFixed(0)}% of ${S.decide_users_per_arm} users/arm needed to decide</small>` : ""}`;
+      <small style="color:var(--muted)">Evidence: ${minUsers.toLocaleString()} users/arm &middot; decides early on a clear winner (p&lt;0.01), otherwise at ${S.decide_users_per_arm.toLocaleString()}</small>` : ""}`;
 
   if (e.result) {
     $("memoPanel").style.display = "";

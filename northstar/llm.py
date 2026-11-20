@@ -1,15 +1,16 @@
 """Model router: "smart" tier for judgment calls, "fast" tier for routine work.
 
-Providers: OpenRouter (OPENROUTER_API_KEY, any model), Anthropic direct (ANTHROPIC_API_KEY), or
-offline "scripted" mode when neither key is set.
+Providers, first key found wins: Superlinked SIE Serverless (SUPERLINKED_API_KEY), OpenRouter
+(OPENROUTER_API_KEY), Anthropic direct (ANTHROPIC_API_KEY), else offline "scripted" mode.
 
 Every call is written to the audit trail with model, tokens and cost, so the demo can show how much
 the routing saves (the Arcee "Pareto frontier" angle).
 
-With no ANTHROPIC_API_KEY the router runs in "scripted" mode: each call site passes a deterministic
-fallback, so the whole loop can be developed and demoed offline.
+In "scripted" mode each call site passes a deterministic fallback, so the whole loop can be developed
+and demoed offline. The same fallback is used if a live model fails twice.
 """
 import json
+import time
 from typing import Callable, TypeVar
 
 import anthropic
@@ -51,38 +52,88 @@ def _arcee(system: str, prompt: str, schema: type[T]) -> T:
     raise NotImplementedError
 
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+# OpenAI-compatible chat-completions providers. Cost comes from what each provider reports.
+PROVIDERS = {
+    "superlinked": {"url": "https://api.superlinked.com/v1/chat/completions", "label": "Superlinked SIE",
+                    "key": lambda: config.SUPERLINKED_API_KEY,
+                    "models": lambda: (config.SUPERLINKED_SMART_MODEL, config.SUPERLINKED_FAST_MODEL),
+                    "max_tokens_field": "max_completion_tokens", "extra": {},
+                    # SIE bills in credits; their credit pack is $50 for 5,000,000 credits.
+                    "cost": lambda u: float(u.get("credits_charged_decimal") or u.get("credits_charged") or 0) / 100_000},
+    "openrouter": {"url": "https://openrouter.ai/api/v1/chat/completions", "label": "OpenRouter",
+                   "key": lambda: config.OPENROUTER_API_KEY,
+                   "models": lambda: (config.OPENROUTER_SMART_MODEL, config.OPENROUTER_FAST_MODEL),
+                   "max_tokens_field": "max_tokens", "extra": {"usage": {"include": True}},
+                   "cost": lambda u: float(u.get("cost") or 0.0)},
+}
 
 
-def _openrouter(step: str, tier: str, system: str, prompt: str, schema: type[T],
-                fallback: Callable[[], T]) -> T:
-    """OpenRouter (OpenAI-compatible chat completions). Asks for JSON matching the Pydantic schema,
-    validates it, and retries once with the validation error before falling back."""
-    model = config.OPENROUTER_SMART_MODEL if tier == "smart" else config.OPENROUTER_FAST_MODEL
-    json_schema = schema.model_json_schema()
+def _strict_schema(schema: type[BaseModel]) -> dict:
+    """Pydantic JSON schema -> strict structured-output schema (every object closed, every field required)."""
+    def fix(node):
+        if isinstance(node, dict):
+            if node.get("type") == "object" and "properties" in node:
+                node["additionalProperties"] = False
+                node["required"] = list(node["properties"].keys())
+            for v in node.values():
+                fix(v)
+        elif isinstance(node, list):
+            for v in node:
+                fix(v)
+        return node
+    return fix(schema.model_json_schema())
+
+
+def _clean_json(text: str) -> str:
+    text = (text or "").strip()
+    if "</think>" in text:  # reasoning models may prepend a think block
+        text = text.split("</think>", 1)[1].strip()
+    text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    if not text.startswith("{") and "{" in text:
+        text = text[text.index("{"): text.rindex("}") + 1]
+    return text
+
+
+def _post_with_cold_start_retry(url: str, body: dict, key: str) -> httpx.Response:
+    """Serverless models scale to zero: a 503 'provisioning' means wait Retry-After and try again."""
+    for _ in range(6):
+        r = httpx.post(url, json=body, timeout=180, headers={"Authorization": f"Bearer {key}"})
+        if r.status_code not in (429, 503):
+            return r
+        time.sleep(min(float(r.headers.get("retry-after") or 10), 30))
+    return r
+
+
+def _chat_completions(provider: str, step: str, tier: str, system: str, prompt: str, schema: type[T],
+                      fallback: Callable[[], T]) -> T:
+    """Ask an OpenAI-compatible provider for JSON matching the Pydantic schema, validate it, and retry
+    once with the validation error before falling back to the scripted response."""
+    p = PROVIDERS[provider]
+    smart, fast = p["models"]()
+    model = smart if tier == "smart" else fast
+    json_schema = _strict_schema(schema)
     messages = [
-        {"role": "system", "content": system + "\n\nRespond with ONLY a JSON object matching this JSON "
-                                               "schema, no prose, no code fences:\n" + json.dumps(json_schema)},
+        {"role": "system", "content": system + "\n\nRespond with a JSON object matching this schema:\n"
+                                               + json.dumps(json_schema)},
         {"role": "user", "content": prompt},
     ]
     last_err = ""
     for attempt in range(2):
-        body = {"model": model, "messages": messages, "usage": {"include": True},
-                "response_format": {"type": "json_object"}}
+        body = {"model": model, "messages": messages, p["max_tokens_field"]: 4000,
+                "response_format": {"type": "json_schema", "json_schema": {
+                    "name": schema.__name__, "strict": True, "schema": json_schema}}, **p["extra"]}
         try:
-            r = httpx.post(OPENROUTER_URL, json=body, timeout=120,
-                           headers={"Authorization": f"Bearer {config.OPENROUTER_API_KEY}"})
+            r = _post_with_cold_start_retry(p["url"], body, p["key"]())
             r.raise_for_status()
             data = r.json()
-            text = data["choices"][0]["message"]["content"] or ""
-            text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-            result = schema.model_validate_json(text)
+            result = schema.model_validate_json(_clean_json(data["choices"][0]["message"]["content"]))
         except Exception as e:  # HTTP error, empty choice, or JSON that fails validation
             last_err = str(e)[:500]
-            messages.append({"role": "user", "content": f"That failed: {last_err}. Return only valid JSON."})
+            messages.append({"role": "user", "content": f"That failed: {last_err}. Return only valid JSON "
+                                                        "with exactly the schema's field names."})
             continue
         usage = data.get("usage") or {}
-        cost = float(usage.get("cost") or 0.0)
+        cost = p["cost"](usage)
         tokens = int(usage.get("total_tokens") or 0)
         totals["cost_usd"] += cost
         if tier == "smart":
@@ -92,7 +143,7 @@ def _openrouter(step: str, tier: str, system: str, prompt: str, schema: type[T],
         else:
             per_tok = totals["smart_cost"] / totals["smart_tokens"] if totals["smart_tokens"] else 0.0
             totals["cost_if_all_smart_usd"] += max(tokens * per_tok, cost)
-        store.audit(step, f"[{tier}] {model} via OpenRouter", {"output": result.model_dump()},
+        store.audit(step, f"[{tier}] {model} via {p['label']}", {"output": result.model_dump()},
                     model=model, cost_usd=cost, tokens=tokens)
         return result
     store.audit(step, f"[{tier}] {model} failed twice ({last_err}), using fallback", model=model, actor="system")
@@ -112,8 +163,8 @@ def structured(step: str, tier: str, system: str, prompt: str, schema: type[T],
                     model="scripted")
         return result
 
-    if config.llm_mode() == "openrouter":
-        return _openrouter(step, tier, system, prompt, schema, fallback)
+    if config.llm_mode() in PROVIDERS:
+        return _chat_completions(config.llm_mode(), step, tier, system, prompt, schema, fallback)
 
     if tier == "fast" and config.ARCEE_API_KEY:
         try:

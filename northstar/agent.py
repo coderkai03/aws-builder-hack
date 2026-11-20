@@ -20,7 +20,9 @@ from .store import store
 _lock = threading.Lock()
 state = {"baseline_params": dict(product.CONTROL), "ticks": 0}
 
-DECIDE_USERS_PER_ARM = max(config.MIN_USERS_PER_ARM * 3, 1200)
+DECIDE_USERS_PER_ARM = max(config.MIN_USERS_PER_ARM * 3, 1200)  # earliest possible decision
+MAX_USERS_PER_ARM = 5000  # always decide by here
+EARLY_STOP_ALPHA = 0.01   # stricter bar for stopping early (we peek every tick)
 
 
 # ---------------------------------------------------------------- schemas -----------
@@ -172,6 +174,15 @@ def design(d: Diagnosis) -> dict:
         seen.add(name)
         variants.append({"name": name, "description": v.description,
                          "params": _apply(v.changes, state["baseline_params"])})
+    if config.DEMO_TRAP and not any(v["params"]["pricing_display"] == "hidden" for v in variants):
+        # Demo: a stakeholder asks to test hiding pricing. It lifts signups but hurts revenue, so the
+        # guardrail should catch it. Labeled honestly in the spec and the audit trail.
+        variants.append({"name": "hide_pricing_stakeholder_request",
+                         "description": "Requested by the sales team: hide pricing until after signup.",
+                         "params": product.normalize({**state["baseline_params"], "pricing_display": "hidden"}),
+                         "added_by": "stakeholder request"})
+        store.audit("design", "Added stakeholder-requested variant 'hide_pricing_stakeholder_request' "
+                    "(guardrail will protect revenue)", {"variant": variants[-1]}, actor="stakeholder")
     full = {"hypothesis": spec.hypothesis, "primary_metric": spec.primary_metric,
             "guardrail": spec.guardrail, "variants": variants, "diagnosis": d.model_dump()}
     exp_id = store.create_experiment(spec.name, full)
@@ -239,7 +250,10 @@ def monitor_tick() -> dict | None:
             _monitor_note(exp, res)
 
         live = [n for n in res["comparisons"] if n not in exp["killed"]]
-        ready = all(res["comparisons"][n]["users"] >= DECIDE_USERS_PER_ARM for n in live) and live
+        min_users = min((res["comparisons"][n]["users"] for n in live), default=0)
+        clear_winner = any(res["comparisons"][n]["primary_p"] < EARLY_STOP_ALPHA
+                           and res["comparisons"][n]["primary_lift"] > 0 for n in live)
+        ready = live and min_users >= DECIDE_USERS_PER_ARM and (clear_winner or min_users >= MAX_USERS_PER_ARM)
         if ready or (not live and res["comparisons"]):
             return _decide(exp, res)
         return res
