@@ -4,9 +4,10 @@ Assignment: we bucket users deterministically (hash of user_id + experiment id) 
 fast. With a real Statsig server SDK you would replace `assign()` with `get_experiment()`; the
 launch / kill / ship calls below already go through the Statsig Console API when a key is set.
 
-TODO(teammate C): verify endpoint paths + payloads against https://docs.statsig.com/console-api
-in the first 30 minutes. Every call is best-effort: failures are logged to the audit trail and the
-local mock keeps the demo running.
+Endpoints verified against Statsig's OpenAPI spec (version 20240601) and a live project:
+create (POST /experiments), start (PUT /{id}/start), kill one group (POST /{id}/disable_groups),
+ship (PUT /{id}/make_decision with the winning group's ID), abandon (PUT /{id}/abandon).
+Every call is best-effort: failures are logged to the audit trail and the demo keeps running.
 """
 import hashlib
 
@@ -18,7 +19,8 @@ BASE = "https://statsigapi.net/console/v1"
 
 
 def _headers():
-    return {"STATSIG-API-KEY": config.STATSIG_CONSOLE_KEY, "Content-Type": "application/json"}
+    return {"STATSIG-API-KEY": config.STATSIG_CONSOLE_KEY, "STATSIG-API-VERSION": "20240601",
+            "Content-Type": "application/json"}
 
 
 def _call(method: str, path: str, json: dict | None = None) -> dict:
@@ -48,20 +50,35 @@ def create_and_start(exp: dict) -> dict:
                    for v in variants],
     }
     created = _call("POST", "/experiments", body)
-    statsig_id = body["name"]
+    statsig_id = ((created.get("body") or {}).get("data") or {}).get("id") or body["name"]
     started = _call("PUT", f"/experiments/{statsig_id}/start")
     return {"statsig_id": statsig_id, "create": created, "start": started}
 
 
+def _ref(exp: dict) -> str:
+    return exp.get("statsig_ref") or exp["id"]
+
+
 def kill_variant(exp: dict, variant: str) -> dict:
-    # Remove the group's allocation; its users fall back to control params.
-    return _call("PATCH", f"/experiments/{exp.get('statsig_ref') or exp['id']}",
-                 {"note": f"North Star auto-kill: {variant} breached guardrail"})
+    """Stop assigning users to one group; its users fall back to control."""
+    return _call("POST", f"/experiments/{_ref(exp)}/disable_groups", {"group_names": [variant]})
 
 
 def ship(exp: dict, variant: str) -> dict:
-    return _call("PUT", f"/experiments/{exp.get('statsig_ref') or exp['id']}/make_decision",
-                 {"id": variant, "reason": "North Star: significant win, guardrails healthy"})
+    """Make the decision: launch the winning group (Statsig needs the group's ID, not its name)."""
+    if not config.STATSIG_CONSOLE_KEY:
+        return _call("PUT", f"/experiments/{_ref(exp)}/make_decision")
+    got = _call("GET", f"/experiments/{_ref(exp)}")
+    groups = ((got.get("body") or {}).get("data") or {}).get("groups") or []
+    group_id = next((g["id"] for g in groups if g.get("name") == variant), None)
+    if not group_id:
+        return {"error": f"group {variant} not found in Statsig", "lookup": got}
+    return _call("PUT", f"/experiments/{_ref(exp)}/make_decision",
+                 {"id": group_id, "decisionReason": f"North Star: {variant} won with healthy guardrails"})
+
+
+def abandon(exp: dict, reason: str) -> dict:
+    return _call("PUT", f"/experiments/{_ref(exp)}/abandon", {"decisionReason": reason})
 
 
 def assign(exp: dict, user_id: str) -> tuple[str, dict]:

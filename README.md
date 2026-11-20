@@ -68,7 +68,7 @@ what's live and what's mocked.
 | Sponsor | Status | Next step |
 |---|---|---|
 | **Amplitude** | Events sent via HTTP V2 when `AMPLITUDE_API_KEY` is set | Build the funnel chart in Amplitude for the demo; optionally read the diagnosis from the Dashboard REST API (`integrations/amplitude.py` TODO) |
-| **Statsig** | Console API create/start/kill/ship (best-effort) | **Verify endpoint paths and payloads** in `integrations/statsig.py` against the Console API docs. Optionally swap `assign()` for the server SDK |
+| **Statsig** | **Live, verified:** create, start, auto-kill (`disable_groups`), ship (`make_decision`), abandon | Optional: swap `assign()` for the Statsig server SDK |
 | **SingleStore** | Set `SINGLESTORE_URL`, `pip install singlestoredb` | Create a Helios workspace; show a SQL query of the audit table in the demo. Stretch: vector search over past experiments |
 | **Cognee** | Set `COGNEE_ENABLED=1`, `pip install cognee` | Confirm the add → cognify → search API in `integrations/memory.py` |
 | **Superlinked** | **Live:** all agent inference runs on SIE Serverless | Pitch it for "Best Personal Agent Harness Using SIE Serverless" |

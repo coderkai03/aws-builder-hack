@@ -312,6 +312,8 @@ def _decide(exp: dict, res: dict) -> dict:
         vendor = statsig.ship(exp, winner)
         state["baseline_params"] = dict(variants[winner]["params"])
         result["statsig"] = vendor
+    else:
+        result["statsig"] = statsig.abandon(exp, "North Star: no variant beat control")
     store.update_experiment(exp["id"], status="shipped" if winner else "no_winner", result=result)
     store.audit("decide", memo.headline, result)
     for lesson in memo.learnings:
