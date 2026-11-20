@@ -128,3 +128,49 @@ def get_state():
         "audit": store.audit_log(150),
         "decide_users_per_arm": agent.MAX_USERS_PER_ARM,
     }
+
+
+# ---- demo video support: slides + live proof from every sponsor -----------------------
+@app.get("/video/{name}")
+def video_slide(name: str):
+    path = (STATIC / "video" / name).resolve()
+    if not str(path).startswith(str((STATIC / "video").resolve())) or not path.is_file():
+        raise HTTPException(404)
+    return FileResponse(path)
+
+
+@app.get("/api/evidence")
+def evidence():
+    """Pull live state back out of each sponsor's API, to prove the integrations are real."""
+    import httpx
+
+    from .integrations import memory
+
+    out: dict = {"integrations": config.integration_status()}
+    exps = store.list_experiments()
+    exp = next((e for e in exps if e.get("statsig_ref")), None)
+    if exp and config.STATSIG_CONSOLE_KEY:
+        try:
+            r = httpx.get(f"{statsig.BASE}/experiments/{exp['statsig_ref']}", headers=statsig._headers(), timeout=20)
+            d = r.json().get("data", {})
+            out["statsig"] = {"id": d.get("id"), "status": d.get("status"),
+                              "groups": [{"name": g["name"], "disabled": g.get("disabled"), "shipped": g.get("shipped")}
+                                         for g in d.get("groups", [])]}
+        except Exception as e:
+            out["statsig"] = {"error": str(e)[:200]}
+    try:
+        out["singlestore"] = {
+            "backend": store.backend,
+            "events": store.query("SELECT COUNT(*) AS n FROM events")[0]["n"],
+            "audit_rows": store.query("SELECT COUNT(*) AS n FROM audit")[0]["n"],
+            "recent": store.query("SELECT step, summary FROM audit ORDER BY ts DESC LIMIT 6"),
+        }
+    except Exception as e:
+        out["singlestore"] = {"error": str(e)[:200]}
+    out["amplitude"] = dict(amplitude.sent)
+    if config.COGNEE_ENABLED:
+        out["cognee"] = {"query": "What have past Acme experiments taught us?",
+                         "answer": (memory.recall("What have past Acme experiments taught us?") or [""])[0]}
+    out["llm"] = {**llm.totals, "provider": config.llm_mode(),
+                  "model": config.SUPERLINKED_SMART_MODEL if config.llm_mode() == "superlinked" else ""}
+    return out

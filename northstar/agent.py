@@ -302,7 +302,8 @@ def _decide(exp: dict, res: dict) -> dict:
         f"Variants killed by guardrail: {exp['killed']}\n"
         f"Decision already made by the statistics engine: {decision}"
         + (f" (winner: {winner})" if winner else "")
-        + "\nWrite the decision memo and the durable learnings about our users."
+        + "\nWrite the decision memo and the durable learnings about our users. The primary metric is "
+          "measured across ALL devices: never describe a lift as mobile-only or desktop-only."
     )
     memo = llm.structured("decide", "smart", SYSTEM, prompt, DecisionMemo, fallback)
 

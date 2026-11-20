@@ -10,6 +10,11 @@ Amplitude   smart LLM   smart LLM                  Statsig    stats + fast LLM  
           (+ memory)                                         SingleStore mirror
 ```
 
+## Demo video
+
+[`demo/northstar-demo.mp4`](demo/northstar-demo.mp4) (2:40): a live run on Superlinked, Statsig, Amplitude,
+SingleStore and Cognee. Re-record it with `node demo/record.js <out-dir>` while the server runs.
+
 ## Quick start (runs offline, no keys needed)
 
 ```bash

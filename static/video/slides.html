@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>North Star</title>
+<style>
+  :root { --bg: #0b0f17; --panel: #121826; --line: #253049; --text: #e6ebf5; --muted: #8a96b0;
+          --accent: #7c9cff; --good: #3ecf8e; --bad: #ff6b6b; --warn: #f5b942; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+               font: 20px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; overflow: hidden; }
+  .slide { display: none; height: 100%; padding: 40px 64px; flex-direction: column; justify-content: center; }
+  .slide.on { display: flex; }
+  .in { opacity: 0; transform: translateY(18px); animation: up .7s ease forwards; }
+  @keyframes up { to { opacity: 1; transform: none; } }
+  .d1 { animation-delay: .3s } .d2 { animation-delay: .9s } .d3 { animation-delay: 1.5s } .d4 { animation-delay: 2.1s }
+  .d5 { animation-delay: 2.7s } .d6 { animation-delay: 3.3s } .d7 { animation-delay: 3.9s } .d8 { animation-delay: 4.5s }
+  h1 { font-size: 76px; margin: 0; letter-spacing: -1px; } h1 span { color: var(--accent); }
+  h2 { font-size: 44px; margin: 0 0 24px; } .sub { font-size: 28px; color: var(--muted); margin-top: 12px; }
+  .star { display: inline-block; animation: spin 6s linear infinite; color: var(--warn); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 36px; }
+  .chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 8px 16px; font-size: 18px; }
+  .chip b { color: var(--good); }
+  .loop { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 20px 0 28px; }
+  .node { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; text-align: center; min-width: 118px; }
+  .node b { display: block; font-size: 18px; letter-spacing: .06em; } .node small { color: var(--muted); font-size: 14px; }
+  .node.kill { border-color: var(--bad); } .node.kill b { color: var(--bad); }
+  .node.human { border-color: var(--warn); } .node.human b { color: var(--warn); }
+  .arrow { color: var(--muted); font-size: 22px; }
+  .pts { font-size: 24px; color: var(--muted); } .pts li { margin: 6px 0; } .pts b { color: var(--text); }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; font-size: 16px; }
+  .card h3 { margin: 0 0 8px; font-size: 20px; } .card h3 em { font-style: normal; color: var(--good); font-size: 14px; margin-left: 8px; }
+  .mono { font-family: ui-monospace, monospace; font-size: 14px; color: var(--muted); white-space: pre-wrap; }
+  .big { font-size: 34px; font-weight: 700; } .ok { color: var(--good); } .no { color: var(--bad); }
+</style>
+</head>
+<body>
+<section class="slide" id="title">
+  <div class="in"><h1><span class="star">&#9733;</span> North <span>Star</span></h1></div>
+  <div class="sub in d1">An autonomous growth PM that runs your A/B tests end to end, and protects revenue while it does.</div>
+  <div class="chips in d2">
+    <span class="chip">Superlinked SIE</span><span class="chip">Statsig</span><span class="chip">Amplitude</span>
+    <span class="chip">SingleStore</span><span class="chip">Cognee</span>
+  </div>
+  <div class="sub in d3" style="font-size:20px;margin-top:40px">Personal Agents Hackathon &middot; tokens&amp; &middot; San Francisco</div>
+</section>
+
+<section class="slide" id="problem">
+  <h2 class="in">Growth teams run one experiment a week. North Star runs the whole loop.</h2>
+  <div class="loop">
+    <div class="node in d1"><b>OBSERVE</b><small>funnel data</small></div><span class="arrow in d1">&rarr;</span>
+    <div class="node in d2"><b>DIAGNOSE</b><small>+ memory</small></div><span class="arrow in d2">&rarr;</span>
+    <div class="node in d3"><b>DESIGN</b><small>variants</small></div><span class="arrow in d3">&rarr;</span>
+    <div class="node human in d4"><b>APPROVE</b><small>human in loop</small></div><span class="arrow in d4">&rarr;</span>
+    <div class="node in d5"><b>LAUNCH</b><small>Statsig</small></div><span class="arrow in d5">&rarr;</span>
+    <div class="node kill in d6"><b>GUARDRAIL</b><small>auto-kill</small></div><span class="arrow in d6">&rarr;</span>
+    <div class="node in d7"><b>DECIDE</b><small>ship + memo</small></div><span class="arrow in d7">&rarr;</span>
+    <div class="node in d8"><b>LEARN</b><small>Cognee graph</small></div>
+  </div>
+  <ul class="pts">
+    <li class="in d5">The model does the <b>judgment</b>: diagnosis, experiment design and the decision memo.</li>
+    <li class="in d6">Code enforces the <b>safety</b>: significance tests, minimum samples, revenue guardrails.</li>
+    <li class="in d7">Every step lands in an <b>audit trail</b> with the data, the model and the cost behind it.</li>
+  </ul>
+</section>
+
+<section class="slide" id="evidence">
+  <h2 class="in">Not a mock-up: live state, read back from each sponsor's API</h2>
+  <div class="grid" id="ev"><div class="card">Loading live evidence...</div></div>
+</section>
+
+<section class="slide" id="outro">
+  <div class="in"><h1><span class="star">&#9733;</span> North <span>Star</span></h1></div>
+  <div class="sub in d1">Observe &rarr; diagnose &rarr; design &rarr; launch &rarr; protect revenue &rarr; ship &rarr; learn.</div>
+  <div class="chips in d2">
+    <span class="chip"><b>Superlinked SIE</b> &middot; all agent reasoning (Qwen3.8 27B)</span>
+    <span class="chip"><b>Statsig</b> &middot; create, start, kill, ship</span>
+    <span class="chip"><b>Amplitude</b> &middot; live event stream</span>
+    <span class="chip"><b>SingleStore</b> &middot; events + audit trail</span>
+    <span class="chip"><b>Cognee</b> &middot; experiment memory graph</span>
+  </div>
+  <div class="sub in d3" style="font-size:20px;margin-top:36px">Traffic in this demo is simulated. Assignment, tracking, statistics and every agent decision are real.</div>
+  <div class="sub in d4" style="font-size:20px">github.com/coderkai03/aws-builder-hack</div>
+</section>
+
+<script>
+const s = new URLSearchParams(location.search).get("s") || "title";
+document.getElementById(s).classList.add("on");
+const esc = (x) => String(x ?? "").replace(/[&<>]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"}[c]));
+if (s === "evidence") {
+  fetch("/api/evidence").then(r => r.json()).then(e => {
+    const st = e.statsig || {}, ss = e.singlestore || {}, am = e.amplitude || {}, cg = e.cognee || {}, l = e.llm || {};
+    const groups = (st.groups || []).map(g => `${g.name}: ${g.shipped ? '<span class="ok">SHIPPED</span>' : g.disabled ? '<span class="no">DISABLED</span>' : "live"}`).join("\n");
+    const cards = [
+      `<h3>Statsig<em>GET /console/v1/experiments</em></h3><div class="mono">${esc(st.id)}\nstatus: ${esc(st.status)}\n${groups}</div>`,
+      `<h3>SingleStore<em>SELECT COUNT(*)</em></h3><div><span class="big">${(ss.events || 0).toLocaleString()}</span> events &middot; <span class="big">${ss.audit_rows || 0}</span> audit rows</div><div class="mono">${(ss.recent || []).slice(0, 3).map(r => esc(r.step) + ": " + esc(r.summary).slice(0, 70)).join("\n")}</div>`,
+      `<h3>Amplitude<em>HTTP V2 ingestion</em></h3><div><span class="big">${(am.events || 0).toLocaleString()}</span> events accepted &middot; <span class="${am.errors ? "no" : "ok"}">${am.errors || 0} errors</span></div>`,
+      `<h3>Cognee<em>GRAPH_COMPLETION search</em></h3><div class="mono">Q: ${esc(cg.query)}\nA: ${esc(cg.answer).slice(0, 170)}</div>`,
+      `<h3>Superlinked SIE<em>/v1/chat/completions</em></h3><div><span class="big">${l.calls || 0}</span> model calls &middot; <span class="big">$${(l.cost_usd || 0).toFixed(4)}</span> total</div><div class="mono">${esc(l.model)}</div>`,
+    ];
+    document.getElementById("ev").innerHTML = cards.map((c, i) => `<div class="card in d${i + 1}">${c}</div>`).join("");
+  });
+}
+</script>
+</body>
+</html>
