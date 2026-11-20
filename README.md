@@ -26,7 +26,10 @@ uvicorn northstar.server:app --reload --port 8000
 
 Open http://localhost:8000 (the agent control room) and http://localhost:8000/acme (the demo product).
 
-With no `ANTHROPIC_API_KEY` the agent runs in **scripted** mode (deterministic responses), so the
+**Models:** set `OPENROUTER_API_KEY` to send every model call through OpenRouter (pick models with
+`OPENROUTER_SMART_MODEL` / `OPENROUTER_FAST_MODEL`; an `arcee-ai/*` model on the fast tier helps the
+Arcee entry), or set `ANTHROPIC_API_KEY` to call Anthropic directly.
+With neither key the agent runs in **scripted** mode (deterministic responses), so the
 UI and loop can be built and demoed before keys arrive. The integration pills in the header show
 what's live and what's mocked.
 
@@ -50,7 +53,7 @@ what's live and what's mocked.
 | File | What it does |
 |---|---|
 | `northstar/agent.py` | The loop. LLM does judgment (diagnose, design, memo); **code enforces safety** (guardrail kills, significance, min sample). |
-| `northstar/llm.py` | Model router: smart tier (`claude-opus-5-5`) vs. fast tier (`claude-haiku-5-5`, or Arcee). Logs cost per call. Structured outputs via Pydantic. |
+| `northstar/llm.py` | Model router: smart tier vs. fast tier, via OpenRouter or Anthropic. Logs cost per call. Output validated against Pydantic schemas (one retry, then a safe fallback). |
 | `northstar/stats.py` | Two-proportion z-test (primary metric), Welch test (revenue guardrail). |
 | `northstar/simulator.py` | Synthetic users with **hidden ground truth** per parameter (incl. the hidden-pricing trap). |
 | `northstar/product.py` | The parameters the agent may change. Variants are parameter sets, not code. |

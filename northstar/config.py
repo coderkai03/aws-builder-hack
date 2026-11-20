@@ -16,6 +16,12 @@ SMART_MODEL = _env("NORTHSTAR_SMART_MODEL", "claude-opus-5-5")
 FAST_MODEL = _env("NORTHSTAR_FAST_MODEL", "claude-haiku-5-5")
 ARCEE_API_KEY = _env("ARCEE_API_KEY")
 
+# OpenRouter: if set, ALL model calls go through OpenRouter (any provider's models).
+# Model slugs: https://openrouter.ai/models  (e.g. put an arcee-ai/* model on the fast tier)
+OPENROUTER_API_KEY = _env("OPENROUTER_API_KEY")
+OPENROUTER_SMART_MODEL = _env("OPENROUTER_SMART_MODEL", "anthropic/claude-sonnet-4.5")
+OPENROUTER_FAST_MODEL = _env("OPENROUTER_FAST_MODEL", "anthropic/claude-haiku-4.5")
+
 STATSIG_CONSOLE_KEY = _env("STATSIG_CONSOLE_KEY")
 AMPLITUDE_API_KEY = _env("AMPLITUDE_API_KEY")
 SINGLESTORE_URL = _env("SINGLESTORE_URL")
@@ -32,7 +38,9 @@ ALPHA = float(_env("NORTHSTAR_ALPHA", "0.05"))
 
 
 def llm_mode() -> str:
-    return "live" if ANTHROPIC_API_KEY else "scripted"
+    if OPENROUTER_API_KEY:
+        return "openrouter"
+    return "anthropic" if ANTHROPIC_API_KEY else "scripted"
 
 
 def integration_status() -> dict:

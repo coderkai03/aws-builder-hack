@@ -135,7 +135,7 @@ function toggleSim() { post(S && S.simulator.running ? "/api/simulator/stop" : "
 
 function renderHeader() {
   $("pills").innerHTML = Object.entries(S.integrations).map(([k, v]) =>
-    `<span class="pill ${["live"].includes(v) ? "live" : ""}">${k}: ${v}</span>`).join("");
+    `<span class="pill ${["mock", "off", "scripted", "sqlite", "local"].includes(v) ? "" : "live"}">${k}: ${v}</span>`).join("");
   $("simBtn").textContent = S.simulator.running ? "Stop traffic" : "Start traffic";
 }
 

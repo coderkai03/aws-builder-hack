@@ -1,14 +1,19 @@
 """Model router: "smart" tier for judgment calls, "fast" tier for routine work.
 
+Providers: OpenRouter (OPENROUTER_API_KEY, any model), Anthropic direct (ANTHROPIC_API_KEY), or
+offline "scripted" mode when neither key is set.
+
 Every call is written to the audit trail with model, tokens and cost, so the demo can show how much
 the routing saves (the Arcee "Pareto frontier" angle).
 
 With no ANTHROPIC_API_KEY the router runs in "scripted" mode: each call site passes a deterministic
 fallback, so the whole loop can be developed and demoed offline.
 """
+import json
 from typing import Callable, TypeVar
 
 import anthropic
+import httpx
 from pydantic import BaseModel
 
 from . import config
@@ -25,7 +30,7 @@ PRICES = {
 
 _client: anthropic.Anthropic | None = None
 totals = {"calls": 0, "cost_usd": 0.0, "smart_calls": 0, "fast_calls": 0,
-          "cost_if_all_smart_usd": 0.0}
+          "cost_if_all_smart_usd": 0.0, "smart_tokens": 0, "smart_cost": 0.0}
 
 
 def client() -> anthropic.Anthropic:
@@ -46,6 +51,54 @@ def _arcee(system: str, prompt: str, schema: type[T]) -> T:
     raise NotImplementedError
 
 
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def _openrouter(step: str, tier: str, system: str, prompt: str, schema: type[T],
+                fallback: Callable[[], T]) -> T:
+    """OpenRouter (OpenAI-compatible chat completions). Asks for JSON matching the Pydantic schema,
+    validates it, and retries once with the validation error before falling back."""
+    model = config.OPENROUTER_SMART_MODEL if tier == "smart" else config.OPENROUTER_FAST_MODEL
+    json_schema = schema.model_json_schema()
+    messages = [
+        {"role": "system", "content": system + "\n\nRespond with ONLY a JSON object matching this JSON "
+                                               "schema, no prose, no code fences:\n" + json.dumps(json_schema)},
+        {"role": "user", "content": prompt},
+    ]
+    last_err = ""
+    for attempt in range(2):
+        body = {"model": model, "messages": messages, "usage": {"include": True},
+                "response_format": {"type": "json_object"}}
+        try:
+            r = httpx.post(OPENROUTER_URL, json=body, timeout=120,
+                           headers={"Authorization": f"Bearer {config.OPENROUTER_API_KEY}"})
+            r.raise_for_status()
+            data = r.json()
+            text = data["choices"][0]["message"]["content"] or ""
+            text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            result = schema.model_validate_json(text)
+        except Exception as e:  # HTTP error, empty choice, or JSON that fails validation
+            last_err = str(e)[:500]
+            messages.append({"role": "user", "content": f"That failed: {last_err}. Return only valid JSON."})
+            continue
+        usage = data.get("usage") or {}
+        cost = float(usage.get("cost") or 0.0)
+        tokens = int(usage.get("total_tokens") or 0)
+        totals["cost_usd"] += cost
+        if tier == "smart":
+            totals["smart_tokens"] += tokens
+            totals["smart_cost"] += cost
+            totals["cost_if_all_smart_usd"] += cost
+        else:
+            per_tok = totals["smart_cost"] / totals["smart_tokens"] if totals["smart_tokens"] else 0.0
+            totals["cost_if_all_smart_usd"] += max(tokens * per_tok, cost)
+        store.audit(step, f"[{tier}] {model} via OpenRouter", {"output": result.model_dump()},
+                    model=model, cost_usd=cost, tokens=tokens)
+        return result
+    store.audit(step, f"[{tier}] {model} failed twice ({last_err}), using fallback", model=model, actor="system")
+    return fallback()
+
+
 def structured(step: str, tier: str, system: str, prompt: str, schema: type[T],
                fallback: Callable[[], T]) -> T:
     """Ask the tier's model for a `schema` object. Logs the call to the audit trail."""
@@ -58,6 +111,9 @@ def structured(step: str, tier: str, system: str, prompt: str, schema: type[T],
         store.audit(step, f"[{tier}] scripted response", {"output": result.model_dump()},
                     model="scripted")
         return result
+
+    if config.llm_mode() == "openrouter":
+        return _openrouter(step, tier, system, prompt, schema, fallback)
 
     if tier == "fast" and config.ARCEE_API_KEY:
         try:
