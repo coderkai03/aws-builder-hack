@@ -67,10 +67,10 @@ what's live and what's mocked.
 
 | Sponsor | Status | Next step |
 |---|---|---|
-| **Amplitude** | Events sent via HTTP V2 when `AMPLITUDE_API_KEY` is set | Build the funnel chart in Amplitude for the demo; optionally read the diagnosis from the Dashboard REST API (`integrations/amplitude.py` TODO) |
+| **Amplitude** | **Live:** every simulated event goes through HTTP V2 (funnel fills live) | Build the funnel chart in Amplitude for the demo |
 | **Statsig** | **Live, verified:** create, start, auto-kill (`disable_groups`), ship (`make_decision`), abandon | Optional: swap `assign()` for the Statsig server SDK |
-| **SingleStore** | Set `SINGLESTORE_URL`, `pip install singlestoredb` | Create a Helios workspace; show a SQL query of the audit table in the demo. Stretch: vector search over past experiments |
-| **Cognee** | Set `COGNEE_ENABLED=1`, `pip install cognee` | Confirm the add → cognify → search API in `integrations/memory.py` |
+| **SingleStore** | **Live:** events, experiments, audit trail and memory over the HTTPS Data API (`SINGLESTORE_URL=https://...`) | Show a SQL query of the `audit` table in the demo |
+| **Cognee** | **Live:** learnings uploaded to Cognee Cloud, cognified into a graph, recalled (`GRAPH_COMPLETION`) before each diagnosis | Show the `northstar_experiments` graph on platform.cognee.ai |
 | **Superlinked** | **Live:** all agent inference runs on SIE Serverless | Pitch it for "Best Personal Agent Harness Using SIE Serverless" |
 | **Arcee** | Hook in `llm._arcee()` | Route the fast tier to Arcee; the economics panel already shows the savings |
 | **Persona** | Not started | Verify the approver's identity before **Approve launch** (`agent.approve`) |

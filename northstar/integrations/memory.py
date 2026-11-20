@@ -5,12 +5,13 @@ dataset and "cognified" into a knowledge graph; before proposing hypotheses the 
 what past experiments taught us. A local table always keeps a copy, so the loop never blocks on it.
 
 Cognee Cloud HTTP API (docs.cognee.ai/cognee-cloud/http-api): X-Api-Key auth,
-  POST /api/v1/add      multipart: datasetName, raw_data
+  POST /api/v1/add      multipart: datasetName + one "data" text-file part per learning
   POST /api/v1/cognify  {"datasets": [...]}
   POST /api/v1/search   {"query", "search_type", "datasets"}
 """
 import json
 import threading
+import uuid
 
 import httpx
 
@@ -30,8 +31,11 @@ def _url(path: str) -> str:
 
 def _push(texts: list[str]):
     try:
-        r = httpx.post(_url("/api/v1/add"), headers=_headers(), timeout=60,
-                       data={"datasetName": DATASET, "raw_data": texts})
+        # Each learning is uploaded as a small text file (multipart "data" field). Plain "raw_data"
+        # form fields were accepted but ingested nothing on Cognee Cloud.
+        files = [("datasetName", (None, DATASET))] + [
+            ("data", (f"learning_{uuid.uuid4().hex[:12]}.txt", t.encode(), "text/plain")) for t in texts]
+        r = httpx.post(_url("/api/v1/add"), headers=_headers(), timeout=60, files=files)
         r.raise_for_status()
         r = httpx.post(_url("/api/v1/cognify"), headers=_headers(), timeout=300,
                        json={"datasets": [DATASET]})
