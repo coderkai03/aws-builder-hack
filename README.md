@@ -27,8 +27,8 @@ uvicorn northstar.server:app --reload --port 8000
 Open http://localhost:8000 (the agent control room) and http://localhost:8000/acme (the demo product).
 
 **Models:** set `OPENROUTER_API_KEY` to send every model call through OpenRouter (pick models with
-`OPENROUTER_SMART_MODEL` / `OPENROUTER_FAST_MODEL`; an `arcee-ai/*` model on the fast tier helps the
-Arcee entry), or set `ANTHROPIC_API_KEY` to call Anthropic directly.
+`OPENROUTER_SMART_MODEL` / `OPENROUTER_FAST_MODEL`; defaults are Claude Opus 5.5 and Claude Haiku 5.5.
+Arcee models aren't on OpenRouter, so the Arcee entry needs Arcee's own API), or set `ANTHROPIC_API_KEY` to call Anthropic directly.
 With neither key the agent runs in **scripted** mode (deterministic responses), so the
 UI and loop can be built and demoed before keys arrive. The integration pills in the header show
 what's live and what's mocked.

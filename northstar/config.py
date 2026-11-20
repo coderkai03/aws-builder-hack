@@ -17,10 +17,10 @@ FAST_MODEL = _env("NORTHSTAR_FAST_MODEL", "claude-haiku-5-5")
 ARCEE_API_KEY = _env("ARCEE_API_KEY")
 
 # OpenRouter: if set, ALL model calls go through OpenRouter (any provider's models).
-# Model slugs: https://openrouter.ai/models  (e.g. put an arcee-ai/* model on the fast tier)
+# Model slugs: https://openrouter.ai/models  (Arcee models are not on OpenRouter as of Nov 2026)
 OPENROUTER_API_KEY = _env("OPENROUTER_API_KEY")
-OPENROUTER_SMART_MODEL = _env("OPENROUTER_SMART_MODEL", "anthropic/claude-sonnet-4.5")
-OPENROUTER_FAST_MODEL = _env("OPENROUTER_FAST_MODEL", "anthropic/claude-haiku-4.5")
+OPENROUTER_SMART_MODEL = _env("OPENROUTER_SMART_MODEL", "anthropic/claude-opus-5.5")
+OPENROUTER_FAST_MODEL = _env("OPENROUTER_FAST_MODEL", "anthropic/claude-haiku-5.5")
 
 STATSIG_CONSOLE_KEY = _env("STATSIG_CONSOLE_KEY")
 AMPLITUDE_API_KEY = _env("AMPLITUDE_API_KEY")
