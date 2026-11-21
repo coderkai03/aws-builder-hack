@@ -6,3 +6,4 @@ python-dotenv>=1.0
 pydantic>=2.7
 # Optional sponsor SDKs (install when you wire them in):
 singlestoredb>=1.0       # SingleStore (used when SINGLESTORE_URL is set)
+# Demo soundtrack only: kokoro-onnx, soundfile, numpy

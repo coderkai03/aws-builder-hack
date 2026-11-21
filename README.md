@@ -13,7 +13,8 @@ Amplitude   smart LLM   smart LLM                  Statsig    stats + fast LLM  
 ## Demo video
 
 [`demo/northstar-demo.mp4`](demo/northstar-demo.mp4) (2:40): a live run on Superlinked, Statsig, Amplitude,
-SingleStore and Cognee. Re-record it with `node demo/record.js <out-dir>` while the server runs.
+SingleStore and Cognee. Narrated with Kokoro TTS plus synthesized sound effects. Re-record with `node demo/record.js <out-dir>`
+while the server runs, then add the soundtrack with `python demo/soundtrack.py <kokoro.onnx> <voices.bin> <in.mp4> <out.mp4>`.
 
 ## Quick start (runs offline, no keys needed)
 
