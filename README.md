@@ -1,97 +1,115 @@
-# ★ North Star: an autonomous growth PM
+# ★ North Star
 
-North Star watches your product data, finds where users drop off, designs A/B experiments,
-launches them in Statsig, **automatically kills variants that hurt revenue**, ships the winners and
-writes up every decision in an audit trail.
+**An autonomous growth PM that runs your A/B tests end to end, and protects revenue while it does.**
 
+North Star finds where users drop off in your funnel, designs experiments to fix it, launches them in
+Statsig after a human approves, **kills any variant that starts losing money**, ships the winner, and
+remembers what it learned for next time. Every decision comes with the data, the model output and the
+cost behind it.
+
+**[▶ Watch the 2:40 demo](demo/northstar-demo.mp4)** (a narrated recording of a live, unedited run)
+
+![North Star control room after a live run: the winner shipped and the stakeholder's variant killed](docs/dashboard.png)
+
+---
+
+## The problem
+
+A growth team ships maybe one experiment a week. Most of that time goes to the busywork around the
+idea: pulling funnel numbers, writing the test plan, configuring the flag, checking the dashboard
+every morning, and writing up the result. Meanwhile a bad variant can quietly bleed revenue for days
+before anyone looks.
+
+## What North Star does
+
+It runs the whole experimentation loop as an agent:
+
+```mermaid
+flowchart LR
+    A[Observe<br/>funnel data] --> B[Diagnose<br/>+ past lessons]
+    B --> C[Design<br/>variants]
+    C --> D{Human<br/>approves}
+    D --> E[Launch<br/>in Statsig]
+    E --> F[Monitor<br/>revenue guardrail]
+    F -- losing money --> K[Auto-kill<br/>variant]
+    F --> G[Decide<br/>ship + memo]
+    G --> H[Learn<br/>knowledge graph]
+    H -. next experiment .-> B
 ```
-OBSERVE → DIAGNOSE → DESIGN → [human approves] → LAUNCH → MONITOR (auto-kill) → DECIDE → LEARN
-Amplitude   smart LLM   smart LLM                  Statsig    stats + fast LLM    smart LLM  Cognee
-          (+ memory)                                         SingleStore mirror
-```
 
-## Demo video
+**The model makes the judgment calls; code enforces the safety.** The model diagnoses the funnel,
+proposes hypotheses, designs the experiment and writes the decision memo. Hard rules (significance
+tests, minimum sample sizes, the revenue guardrail) live in code, so the agent can't talk itself into
+shipping a loser.
 
-[`demo/northstar-demo.mp4`](demo/northstar-demo.mp4) (2:40): a live run on Superlinked, Statsig, Amplitude,
-SingleStore and Cognee. Narrated with Kokoro TTS plus synthesized sound effects. Re-record with `node demo/record.js <out-dir>`
-while the server runs, then add the soundtrack with `python demo/soundtrack.py <kokoro.onnx> <voices.bin> <in.mp4> <out.mp4>`.
+## What happened in the demo run
 
-## Quick start (runs offline, no keys needed)
+We pointed North Star at **Acme Cloud**, a simulated SaaS signup funnel with 3,000 visitors.
+
+1. **It found the leak.** Only 35% of people who started signing up finished. Splitting by device, the
+   agent spotted the real problem: **mobile completion was 27.2% vs 43.3% on desktop.** Its knowledge
+   graph also recalled that shorter forms had worked before.
+2. **It designed an experiment** with two variants: a 3-field form with a customer testimonial, and a
+   new call to action with a longer trial. Variants are just parameters, so nothing needs a deploy.
+3. **A stakeholder asked to test hiding pricing until after signup.** North Star added it as a variant,
+   clearly labeled as a stakeholder request.
+4. **A human approved the launch**, and North Star created and started the experiment in Statsig.
+5. **The guardrail fired.** Hiding pricing *did* get more signups (+10%), but revenue per user fell
+   **65.8%** (p = 0.001). North Star disabled that variant in Statsig automatically, mid-experiment.
+
+   ![The revenue guardrail auto-kills the hide-pricing variant](docs/guardrail-kill.png)
+
+6. **It shipped the winner.** The 3-field form with a testimonial lifted completed signups by
+   **+31.2% (p = 0.0007)** and raised revenue per user. North Star made the ship decision in Statsig and
+   wrote a memo explaining why, with the numbers.
+7. **It learned.** The lessons went into a Cognee knowledge graph, and the next diagnosis cites them.
+
+**The model calls for that whole experiment cost $0.0046.**
+
+## Built on our partners' platforms
+
+Every integration is live and verified against the real APIs, not mocked. At the end of the demo,
+North Star reads its state back from each one:
+
+![Live state read back from Statsig, SingleStore, Amplitude, Cognee and Superlinked](docs/live-evidence.png)
+
+| Partner | What it does in North Star |
+|---|---|
+| **Superlinked SIE Serverless** | All of the agent's reasoning: diagnosis, experiment design, monitoring notes and decision memos, on Qwen3.8 27B with strict JSON-schema output, so every answer is machine-checkable. About half a cent per experiment. |
+| **Statsig** | The agent's hands. Through the Console API it creates and starts experiments, disables a losing variant mid-test, and makes the ship decision on the winning group. |
+| **Amplitude** | Every product event (landing, signup start, signup complete, purchase) streams in live, with experiment and variant attached. 31,551 events in the demo run, zero errors. |
+| **SingleStore** | The system of record: the event stream North Star runs its statistics on in real time, the experiment registry, and the full audit trail of every decision. |
+| **Cognee** | Long-term memory. Each experiment's lessons are added to a knowledge graph, and before every new diagnosis the agent asks it what past experiments taught us. |
+
+## Why it matters
+
+- **Faster learning.** Spotting the leak, designing and launching a test, and writing the decision
+  takes minutes of agent time instead of a week of analyst time.
+- **Revenue protection that never sleeps.** The guardrail checks every variant continuously and kills
+  a losing one the moment the evidence is in, instead of at next week's review.
+- **Trustworthy autonomy.** A human approves every launch, safety rules are enforced in code, and the
+  audit trail shows exactly what the agent saw, decided and spent.
+- **It compounds.** Every experiment makes the next diagnosis smarter.
+
+## Being upfront
+
+The visitor traffic is **simulated**: real experiments take weeks of real users, and a hackathon has
+neither. Each simulated variant has a hidden true effect the agent never sees, so the demo shows it
+discovering the truth. Everything else is real: experiment assignment and lifecycle in Statsig,
+events in Amplitude and SingleStore, the statistics, the memory in Cognee, and every agent decision
+from the live model. The "hide pricing" variant is a scripted stakeholder request we add to show the
+guardrail in action.
+
+## Try it
 
 ```bash
 pip install -r requirements.txt
 ```
 
 ```bash
-cp .env.example .env   # fill in whatever keys you have; empty = local mock
+uvicorn northstar.server:app --port 8000
 ```
 
-```bash
-uvicorn northstar.server:app --reload --port 8000
-```
-
-Open http://localhost:8000 (the agent control room) and http://localhost:8000/acme (the demo product).
-
-**Models:** set `SUPERLINKED_API_KEY` to run on Superlinked SIE Serverless (default: `Qwen/Qwen3.8-27B-FP8`
-with strict JSON-schema output; a full plan → decide cycle costs about $0.004). Or set `OPENROUTER_API_KEY` to send every model call through OpenRouter (pick models with
-`OPENROUTER_SMART_MODEL` / `OPENROUTER_FAST_MODEL`; defaults are Claude Opus 5.5 and Claude Haiku 5.5.
-Arcee models aren't on OpenRouter, so the Arcee entry needs Arcee's own API), or set `ANTHROPIC_API_KEY` to call Anthropic directly.
-With neither key the agent runs in **scripted** mode (deterministic responses), so the
-UI and loop can be built and demoed before keys arrive. The integration pills in the header show
-what's live and what's mocked.
-
-## Demo script (about 3 minutes)
-
-1. **Reset**, then **Seed baseline (3k users)**. The funnel shows the weak step: *Started signup → Completed signup*.
-2. **Run agent.** The audit trail fills: observe → diagnose (mobile vs. desktop insight, past learnings from memory) → design.
-3. The experiment card shows 3 variants as parameter changes. Click **Approve launch** (human in the loop).
-   Show the experiment in the Statsig console.
-4. **Start traffic.** Variants separate on the live chart. Open `/acme` in a second tab: the page changes per variant with no deploy.
-5. **The moment:** with `NORTHSTAR_DEMO_TRAP=1`, a stakeholder-requested `hide_pricing` variant is added. It gets more signups but tanks revenue, so the agent **auto-kills it** (red event in the audit trail).
-6. The agent reaches significance, **ships the winner** and writes the decision memo. Learnings go into memory.
-7. Click any audit event to expand the exact data and model output behind it. Point at the
-   *agent economics* panel (smart vs. fast model calls, $ saved by routing).
-
-> Say it out loud: the traffic is simulated (real experiments take weeks). Assignment, tracking,
-> the stats and the agent's decisions are real.
-
-## How the code is laid out
-
-| File | What it does |
-|---|---|
-| `northstar/agent.py` | The loop. LLM does judgment (diagnose, design, memo); **code enforces safety** (guardrail kills, significance, min sample). |
-| `northstar/llm.py` | Model router: smart tier vs. fast tier, via OpenRouter or Anthropic. Logs cost per call. Output validated against Pydantic schemas (one retry, then a safe fallback). |
-| `northstar/stats.py` | Two-proportion z-test (primary metric), Welch test (revenue guardrail). |
-| `northstar/simulator.py` | Synthetic users with **hidden ground truth** per parameter (incl. the hidden-pricing trap). |
-| `northstar/product.py` | The parameters the agent may change. Variants are parameter sets, not code. |
-| `northstar/store.py` | SingleStore (or SQLite): event mirror, experiment registry, audit log, memory. |
-| `northstar/integrations/` | `statsig.py`, `amplitude.py`, `memory.py` (Cognee). All fall back to mocks. |
-| `northstar/server.py` | FastAPI: dashboard, Acme page, agent + simulator endpoints. |
-| `static/` | `dashboard.html` (control room) and `acme.html` (demo product). |
-
-## Sponsor checklist
-
-| Sponsor | Status | Next step |
-|---|---|---|
-| **Amplitude** | **Live:** every simulated event goes through HTTP V2 (funnel fills live) | Build the funnel chart in Amplitude for the demo |
-| **Statsig** | **Live, verified:** create, start, auto-kill (`disable_groups`), ship (`make_decision`), abandon | Optional: swap `assign()` for the Statsig server SDK |
-| **SingleStore** | **Live:** events, experiments, audit trail and memory over the HTTPS Data API (`SINGLESTORE_URL=https://...`) | Show a SQL query of the `audit` table in the demo |
-| **Cognee** | **Live:** learnings uploaded to Cognee Cloud, cognified into a graph, recalled (`GRAPH_COMPLETION`) before each diagnosis | Show the `northstar_experiments` graph on platform.cognee.ai |
-| **Superlinked** | **Live:** all agent inference runs on SIE Serverless | Pitch it for "Best Personal Agent Harness Using SIE Serverless" |
-| **Arcee** | Hook in `llm._arcee()` | Route the fast tier to Arcee; the economics panel already shows the savings |
-| **Persona** | Not started | Verify the approver's identity before **Approve launch** (`agent.approve`) |
-| **Airbyte** | Not started | Bring in Stripe/CRM data so decisions use real revenue |
-| **Senso** | Not started | Brand guidelines and product facts as trusted context for variant copy |
-
-## Team split
-
-| Person | Owns |
-|---|---|
-| A | Acme page + simulator realism, demo polish |
-| B | Agent prompts (`agent.py`), LLM router, Arcee |
-| C | Statsig + Amplitude + SingleStore + Cognee wiring |
-| D | Dashboard UI, Persona approval, **record video by 3:45 PM**, submission |
-
-## Submission (deadline 4:30 PM PT)
-
-GitHub repo, demo video link, what we built and the tools used, team names and emails, plus a screenshot.
+Open http://localhost:8000. With no API keys it runs in an offline demo mode. Add keys from
+[`.env.example`](.env.example) to switch each partner integration to live. Then click
+**Seed baseline → Run agent → Approve launch → Start traffic** and watch it run.
