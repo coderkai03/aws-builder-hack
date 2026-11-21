@@ -5,7 +5,7 @@ to land within the first minute. Treat it as a **startup launch video**, not a c
 
 ## Rules
 
-1. **90 seconds max.** Aim for 60–90.
+1. **60 seconds.** No dead air: keep the narration continuous and every beat short.
 2. **Hook in the first 5 seconds.** Open on the problem as a punchy, slightly provocative line
    ("Your A/B test is losing money."), not on the product name or a title slide.
 3. **Name and one-line promise next.** Logo reveal plus a single tagline.

@@ -53,7 +53,7 @@ function el(html, cls = "layer") { const d = document.createElement("div"); d.cl
 function anim(node, frames, ms, delay = 0, easing = EASE) {
   return node.animate(frames, { duration: ms, delay, easing, fill: "both" });
 }
-function out(node, ms = 450, delay = 0) { anim(node, [{ opacity: 1 }, { opacity: 0, filter: "blur(12px)" }], ms, delay, EASE_IO); setTimeout(() => node.remove(), delay + ms + 50); }
+function out(node, ms = 300, delay = 0) { anim(node, [{ opacity: 1 }, { opacity: 0, filter: "blur(12px)" }], ms, delay, EASE_IO); setTimeout(() => node.remove(), delay + ms + 50); }
 
 // word-by-word kinetic headline
 function kinetic(text, { size, stagger = 110, delay = 0 } = {}) {
@@ -91,141 +91,141 @@ function flash(color = "var(--bad)") {
 // ---------------------------------------------------------------- the timeline ----
 const SCENES = [
   [0.0, () => { // HOOK
-    const a = kinetic("Your A/B test is *losing *money.");
-    setTimeout(() => out(a, 400), 3900);
+    const a = kinetic("Your A/B test is *losing *money.", { stagger: 70 });
+    setTimeout(() => out(a, 250), 2350);
   }],
-  [4.4, () => {
-    const a = kinetic("And nobody's watching it.", { size: 110 });
-    setTimeout(() => out(a, 400), 3300);
+  [2.6, () => {
+    const a = kinetic("And nobody's watching it.", { size: 110, stagger: 70 });
+    setTimeout(() => out(a, 250), 1950);
   }],
-  [8.0, () => { // LOGO REVEAL
+  [4.8, () => { // LOGO REVEAL
     const n = el(`<div style="text-align:center">
       <div id="logo" style="font:700 190px/1 var(--display);letter-spacing:-6px"><span id="star" style="color:var(--star);display:inline-block">&#9733;</span> North Star</div>
       <div class="sub" id="tag" style="margin-top:28px">The autonomous growth PM.</div></div>`);
     anim(n.querySelector("#logo"), [{ opacity: 0, transform: "scale(1.25)", filter: "blur(24px)", letterSpacing: "20px" },
-                                    { opacity: 1, transform: "scale(1)", filter: "blur(0)", letterSpacing: "-6px" }], 1400);
-    anim(n.querySelector("#star"), [{ transform: "rotate(-180deg) scale(.4)" }, { transform: "rotate(0) scale(1)" }], 1500);
-    anim(n.querySelector("#tag"), [{ opacity: 0, transform: "translateY(20px)" }, { opacity: 1, transform: "none" }], 900, 700);
-    setTimeout(() => out(n, 500), 4500);
+                                    { opacity: 1, transform: "scale(1)", filter: "blur(0)", letterSpacing: "-6px" }], 900);
+    anim(n.querySelector("#star"), [{ transform: "rotate(-180deg) scale(.4)" }, { transform: "rotate(0) scale(1)" }], 1000);
+    anim(n.querySelector("#tag"), [{ opacity: 0, transform: "translateY(20px)" }, { opacity: 1, transform: "none" }], 600, 400);
+    setTimeout(() => out(n, 300), 3100);
   }],
-  [13.0, () => { // PRODUCT HERO: the control room in perspective, slow push-in
+  [8.2, () => { // PRODUCT HERO
     const wrap = el(`<div style="perspective:2200px;width:100%;height:100%;display:flex;align-items:center;justify-content:center">
       <div class="shot" style="position:relative;width:1500px;height:844px"><img src="assets/full.png"></div></div>`);
     const s = wrap.querySelector(".shot");
     anim(s, [{ transform: "rotateX(24deg) rotateZ(-4deg) translateY(160px) scale(.82)", opacity: 0 },
-             { transform: "rotateX(12deg) rotateZ(-2deg) translateY(40px) scale(.95)", opacity: 1, offset: .25 },
-             { transform: "rotateX(0) rotateZ(0) translateY(0) scale(1.06)", opacity: 1 }], 7600, 0, "cubic-bezier(.25,.1,.25,1)");
+             { transform: "rotateX(12deg) rotateZ(-2deg) translateY(40px) scale(.95)", opacity: 1, offset: .2 },
+             { transform: "rotateX(0) rotateZ(0) translateY(0) scale(1.06)", opacity: 1 }], 4600, 0, "cubic-bezier(.25,.1,.25,1)");
     const cap = el(`<div class="chip" style="position:absolute;bottom:70px">It runs your experiments. End to end.</div>`);
-    anim(cap.firstElementChild, [{ opacity: 0, transform: "translateY(30px)" }, { opacity: 1, transform: "none" }], 800, 900);
+    anim(cap.firstElementChild, [{ opacity: 0, transform: "translateY(30px)" }, { opacity: 1, transform: "none" }], 500, 400);
     const foot = el(`<div class="foot">Demo traffic is simulated. Every agent decision is real.</div>`, "");
-    anim(foot.firstElementChild, [{ opacity: 0 }, { opacity: 1 }], 600, 1400);
-    setTimeout(() => { out(wrap, 500); out(cap, 400); out(foot, 400); }, 7500);
+    anim(foot.firstElementChild, [{ opacity: 0 }, { opacity: 1 }], 400, 700);
+    setTimeout(() => { out(wrap, 300); out(cap, 250); out(foot, 250); }, 4300);
   }],
-  [21.0, () => { // 1. FINDS THE LEAK
+  [12.8, () => { // 01 DIAGNOSE
     const l = label("01 · Diagnose", "Finds the leak.");
     const f = shot("funnel.png", { w: 450, h: 405, x: 140, y: 340 });
-    anim(f, [{ opacity: 0, transform: "translateY(80px) rotate(-3deg)" }, { opacity: 1, transform: "rotate(-2deg)" }], 900, 200);
+    anim(f, [{ opacity: 0, transform: "translateY(80px) rotate(-3deg)" }, { opacity: 1, transform: "rotate(-2deg)" }], 600, 100);
     const d = shot("diagnosis.png", { w: 560, h: 384, x: 660, y: 520 });
-    anim(d, [{ opacity: 0, transform: "translateY(80px) rotate(3deg)" }, { opacity: 1, transform: "rotate(1.5deg)" }], 900, 700);
+    anim(d, [{ opacity: 0, transform: "translateY(80px) rotate(3deg)" }, { opacity: 1, transform: "rotate(1.5deg)" }], 600, 350);
     const nums = el(`<div style="position:absolute;right:120px;top:300px;text-align:right">
       <div class="sub" style="text-align:right">mobile signup completion</div>
       <div class="big" style="color:var(--bad)" id="mob">0%</div>
       <div class="sub" style="text-align:right;margin-top:10px">vs <b style="color:var(--ink)">${R.desktop}%</b> on desktop</div></div>`, "");
-    anim(nums.firstElementChild, [{ opacity: 0, transform: "translateX(80px)" }, { opacity: 1, transform: "none" }], 800, 1200);
-    setTimeout(() => countUp(nums.querySelector("#mob"), parseFloat(R.mobile), { decimals: 1 }), 1300);
-    setTimeout(() => { [l, f, d, nums].forEach(n => out(n, 450)); }, 8600);
+    anim(nums.firstElementChild, [{ opacity: 0, transform: "translateX(80px)" }, { opacity: 1, transform: "none" }], 500, 600);
+    setTimeout(() => countUp(nums.querySelector("#mob"), parseFloat(R.mobile), { decimals: 1, ms: 900 }), 700);
+    setTimeout(() => { [l, f, d, nums].forEach(n => out(n, 300)); }, 5700);
   }],
-  [30.0, () => { // 2. DESIGNS THE TEST
+  [18.8, () => { // 02 DESIGN
     const l = label("02 · Design", "Designs the test.");
     const e = shot("experiment_pending.png", { w: 1272, h: 615, x: 324, y: 330 });
-    anim(e, [{ opacity: 0, transform: "translateY(100px) scale(.96)" }, { opacity: 1, transform: "none" }], 900);
+    anim(e, [{ opacity: 0, transform: "translateY(100px) scale(.96)" }, { opacity: 1, transform: "none" }], 600);
     anim(e.querySelector("img"), [{ transform: "scale(1)", transformOrigin: "0% 75%" },
-                                  { transform: "scale(1.18)", transformOrigin: "0% 75%" }], 5200, 1000, EASE_IO);
+                                  { transform: "scale(1.18)", transformOrigin: "0% 75%" }], 3200, 500, EASE_IO);
     const b = shot("approve_button.png", { w: 447, h: 111, x: 1300, y: 230 });
-    anim(b, [{ opacity: 0, transform: "scale(.6)" }, { opacity: 1, transform: "scale(1.08)", offset: .7 }, { opacity: 1, transform: "scale(1)" }], 600, 4200);
-    anim(b, [{ transform: "scale(1)" }, { transform: "scale(.92)" }, { transform: "scale(1)" }], 260, 5600, "ease-in-out");
+    anim(b, [{ opacity: 0, transform: "scale(.6)" }, { opacity: 1, transform: "scale(1.08)", offset: .7 }, { opacity: 1, transform: "scale(1)" }], 450, 2900);
+    anim(b, [{ transform: "scale(1)" }, { transform: "scale(.92)" }, { transform: "scale(1)" }], 220, 3800, "ease-in-out");
     const live = el(`<div class="chip" style="position:absolute;right:170px;top:370px;color:var(--good);border-color:rgba(62,207,142,.5);background:rgba(62,207,142,.12)">&#9679; Live in Statsig</div>`, "");
-    anim(live.firstElementChild, [{ opacity: 0, transform: "translateY(-14px)" }, { opacity: 1, transform: "none" }], 600, 6000);
-    setTimeout(() => { [l, e, b, live].forEach(n => out(n, 450)); }, 8500);
+    anim(live.firstElementChild, [{ opacity: 0, transform: "translateY(-14px)" }, { opacity: 1, transform: "none" }], 400, 4100);
+    setTimeout(() => { [l, e, b, live].forEach(n => out(n, 300)); }, 5900);
   }],
-  [39.2, () => { // 3. PROTECTS REVENUE  (the money shot)
+  [25.0, () => { // 03 GUARDRAIL (the money shot)
     const l = label("03 · Guardrail", "Protects revenue.");
     const e = shot("experiment_killed.png", { w: 1272, h: 660, x: 324, y: 330 });
-    anim(e, [{ opacity: 0, transform: "translateY(100px)" }, { opacity: 1, transform: "none" }], 800);
+    anim(e, [{ opacity: 0, transform: "translateY(100px)" }, { opacity: 1, transform: "none" }], 600);
     anim(e.querySelector("img"), [{ transform: "scale(1)", transformOrigin: "0% 92%" },
-                                  { transform: "scale(1.4)", transformOrigin: "0% 92%" }], 3600, 1200, EASE_IO);
-    setTimeout(flash, 4700);
+                                  { transform: "scale(1.4)", transformOrigin: "0% 92%" }], 2300, 400, EASE_IO);
     const big = el(`<div style="text-align:center"><div class="big" style="color:var(--bad);font-size:260px" id="rev">0%</div>
       <div class="kin" style="font-size:96px;margin-top:6px"><span class="w">revenue</span> <span class="w">per</span> <span class="w">user</span></div></div>`);
     big.style.background = "rgba(5,7,13,.82)"; big.style.opacity = 0;
     setTimeout(() => {
-      anim(big, [{ opacity: 0 }, { opacity: 1 }], 300, 0, "linear");
-      big.querySelectorAll(".w").forEach((w, i) => anim(w, [{ opacity: 0, transform: "translateY(30px)" }, { opacity: 1, transform: "none" }], 500, 300 + i * 90));
-      countUp(big.querySelector("#rev"), R.killRevenue, { ms: 900, decimals: 1 });
-    }, 4700);
+      flash();
+      anim(big, [{ opacity: 0 }, { opacity: 1 }], 200, 0, "linear");
+      big.querySelectorAll(".w").forEach((w, i) => anim(w, [{ opacity: 0, transform: "translateY(30px)" }, { opacity: 1, transform: "none" }], 400, 150 + i * 70));
+      countUp(big.querySelector("#rev"), R.killRevenue, { ms: 700, decimals: 1 });
+    }, 2800);
     setTimeout(() => {
       big.querySelector(".kin").innerHTML = `<span class="w" style="opacity:1">Killed.</span> <span class="w" style="opacity:1;color:var(--muted)">Automatically.</span>`;
-      anim(big.querySelector(".kin"), [{ transform: "scale(1.15)", filter: "blur(8px)" }, { transform: "none", filter: "blur(0)" }], 500);
+      anim(big.querySelector(".kin"), [{ transform: "scale(1.15)", filter: "blur(8px)" }, { transform: "none", filter: "blur(0)" }], 400);
       const k = shot("kill_event.png", { w: 700, h: 142, x: 610, y: 820 });
-      anim(k, [{ opacity: 0, transform: "translateY(40px)" }, { opacity: 1, transform: "none" }], 600);
-      setTimeout(() => out(k, 400), 4000);
-    }, 7600);
-    setTimeout(() => { [l, e, big].forEach(n => out(n, 450)); }, 12300);
+      anim(k, [{ opacity: 0, transform: "translateY(40px)" }, { opacity: 1, transform: "none" }], 450);
+      setTimeout(() => out(k, 250), 3300);
+    }, 5000);
+    setTimeout(() => { [l, e, big].forEach(n => out(n, 300)); }, 8700);
   }],
-  [52.0, () => { // 4. SHIPS THE WINNER
+  [34.0, () => { // 04 DECIDE
     const l = label("04 · Decide", "Ships the winner.");
     const e = shot("experiment_done.png", { w: 1272, h: 660, x: 324, y: 330 });
-    anim(e, [{ opacity: 0, transform: "translateY(100px)" }, { opacity: 1, transform: "none" }], 800);
+    anim(e, [{ opacity: 0, transform: "translateY(100px)" }, { opacity: 1, transform: "none" }], 600);
     anim(e.querySelector("img"), [{ transform: "scale(1)", transformOrigin: "0% 55%" },
-                                  { transform: "scale(1.3)", transformOrigin: "0% 55%" }], 3600, 900, EASE_IO);
+                                  { transform: "scale(1.3)", transformOrigin: "0% 55%" }], 1500, 300, EASE_IO);
     const big = el(`<div style="text-align:center"><div class="big" style="color:var(--good);font-size:260px" id="lift">+0%</div>
       <div class="sub" style="font-size:48px;color:var(--ink)">more completed signups</div></div>`);
     big.style.background = "rgba(5,7,13,.82)"; big.style.opacity = 0;
     setTimeout(() => {
-      anim(big, [{ opacity: 0 }, { opacity: 1 }], 300, 0, "linear");
-      countUp(big.querySelector("#lift"), R.winLift, { prefix: "+", ms: 1000 });
+      anim(big, [{ opacity: 0 }, { opacity: 1 }], 200, 0, "linear");
+      countUp(big.querySelector("#lift"), R.winLift, { prefix: "+", ms: 800 });
       flash("var(--good)");
-    }, 4300);
-    setTimeout(() => { [l, e, big].forEach(n => out(n, 450)); }, 9500);
+    }, 1600);
+    setTimeout(() => { [l, e, big].forEach(n => out(n, 300)); }, 5200);
   }],
-  [62.0, () => { // 5. LEARNS
+  [39.5, () => { // 05 LEARN
     const l = label("05 · Learn", "Remembers for next time.");
     const m = shot("memo.png", { w: 1272, h: 561, x: 324, y: 360 });
     anim(m, [{ opacity: 0, transform: "perspective(1800px) rotateY(-14deg) translateX(120px)" },
-             { opacity: 1, transform: "perspective(1800px) rotateY(-4deg)" }], 1100);
-    anim(m.querySelector("img"), [{ transform: "scale(1.05) translateY(0)" }, { transform: "scale(1.05) translateY(-60px)" }], 5000, 600, "linear");
-    setTimeout(() => { [l, m].forEach(n => out(n, 450)); }, 5600);
+             { opacity: 1, transform: "perspective(1800px) rotateY(-4deg)" }], 700);
+    anim(m.querySelector("img"), [{ transform: "scale(1.05) translateY(0)" }, { transform: "scale(1.05) translateY(-50px)" }], 3200, 300, "linear");
+    setTimeout(() => { [l, m].forEach(n => out(n, 300)); }, 3200);
   }],
-  [68.0, () => { // PARTNER WALL
+  [43.0, () => { // PARTNER WALL
     const rows = [["Superlinked", "thinks"], ["Statsig", "acts"], ["Amplitude", "tracks"], ["SingleStore", "records"], ["Cognee", "remembers"]];
     const n = el(`<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">${rows.map(([a, b]) =>
       `<div class="partner">${a}<span>${b}</span></div>`).join("")}</div>`);
     n.querySelectorAll(".partner").forEach((p, i) =>
-      anim(p, [{ opacity: 0, transform: "translateX(-80px)", filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }], 700, 300 + i * 650));
-    setTimeout(() => out(n, 450), 9600);
+      anim(p, [{ opacity: 0, transform: "translateX(-80px)", filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }], 500, 200 + i * 620));
+    setTimeout(() => out(n, 300), 6200);
   }],
-  [78.0, () => { // PROOF POINTS
+  [49.5, () => { // PROOF POINTS
     const items = [[`$${R.cost.toFixed(4)}`, "of AI per experiment"], ["1 click", "human approval to launch"], ["100%", "of decisions audited"]];
     const n = el(`<div style="display:flex;gap:110px">${items.map(([a, b]) =>
       `<div style="text-align:center;opacity:0" class="pp"><div style="font:700 120px/1 var(--display);letter-spacing:-4px">${a}</div>
        <div class="sub" style="margin-top:14px;font-size:30px">${b}</div></div>`).join("")}</div>`);
     n.querySelectorAll(".pp").forEach((p, i) =>
-      anim(p, [{ opacity: 0, transform: "translateY(60px)" }, { opacity: 1, transform: "none" }], 700, i * 380));
-    setTimeout(() => out(n, 450), 5600);
+      anim(p, [{ opacity: 0, transform: "translateY(60px)" }, { opacity: 1, transform: "none" }], 500, i * 300));
+    setTimeout(() => out(n, 300), 4700);
   }],
-  [84.0, () => { // END CARD
+  [54.5, () => { // END CARD
     const n = el(`<div style="text-align:center">
       <div style="font:700 170px/1 var(--display);letter-spacing:-6px"><span style="color:var(--star)">&#9733;</span> North Star</div>
       <div class="sub" style="margin-top:30px;color:var(--ink);font-size:52px">Ship experiments on autopilot.</div>
       <div class="sub" style="margin-top:46px;font-size:26px">github.com/coderkai03/aws-builder-hack</div></div>`);
-    anim(n.firstElementChild, [{ opacity: 0, transform: "scale(.94)", filter: "blur(14px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }], 1200);
+    anim(n.firstElementChild, [{ opacity: 0, transform: "scale(.94)", filter: "blur(14px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }], 900);
   }],
 ];
 
-window.TOTAL = 90.0;
+window.TOTAL = 60.0;
 window.start = () => {
-  anim(document.getElementById("g1"), [{ transform: "translate(0,0)" }, { transform: "translate(500px,300px)" }], 90000, 0, "ease-in-out");
-  anim(document.getElementById("g2"), [{ transform: "translate(0,0)" }, { transform: "translate(-400px,-250px)" }], 90000, 0, "ease-in-out");
+  anim(document.getElementById("g1"), [{ transform: "translate(0,0)" }, { transform: "translate(500px,300px)" }], 60000, 0, "ease-in-out");
+  anim(document.getElementById("g2"), [{ transform: "translate(0,0)" }, { transform: "translate(-400px,-250px)" }], 60000, 0, "ease-in-out");
   for (const [t, fn] of SCENES) setTimeout(fn, t * 1000);
 };
 </script>

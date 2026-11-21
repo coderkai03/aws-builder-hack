@@ -11,34 +11,35 @@ from kokoro_onnx import Kokoro
 
 SR = 24000
 VOICE = "af_heart"
-BPM = 100
+BPM = 118
 BEAT = 60 / BPM
 
-# (start, line, must end by)
+# (start, line, must end by): near-continuous voice, beats every few seconds
 NARRATION = [
-    (0.3, "Your A/B test is losing money.", 4.2),
-    (4.6, "And nobody's watching it.", 7.8),
-    (8.7, "Meet North Star. The autonomous growth P.M.", 12.8),
-    (13.6, "It runs your experiments, end to end.", 20.5),
-    (21.4, "It finds the leak: mobile users are abandoning signup.", 29.6),
-    (30.4, "It designs the test. You approve, and it goes live in Statsig.", 38.8),
-    (39.6, "When a variant starts losing money,", 43.6),
-    (44.1, "revenue down forty-two percent,", 46.6),
-    (46.9, "North Star kills it. Automatically.", 51.6),
-    (52.4, "Then it ships the winner.", 55.9),
-    (56.5, "Thirty-five percent more signups.", 61.6),
-    (62.4, "And it remembers what it learned, for next time.", 67.8),
-    (68.4, "Powered by Superlinked, Statsig, Amplitude, SingleStore, and Cognee.", 77.6),
-    (78.3, "Less than a cent per experiment. A human approves every launch. Every decision is audited.", 83.9),
-    (84.7, "North Star. Ship experiments on autopilot.", 89.6),
+    (0.2, "Your A/B test is losing money.", 2.6),
+    (2.7, "And nobody's watching it.", 4.7),
+    (4.9, "Meet North Star, the autonomous growth P.M.", 8.1),
+    (8.3, "It runs your experiments end to end, from diagnosis to decision.", 12.6),
+    (12.9, "First, it finds the leak: mobile users finish signup far less often than desktop users.", 18.6),
+    (18.9, "Then it designs the test. You approve with one click, and it goes live in Statsig.", 24.8),
+    (25.1, "When a variant starts losing money,", 27.7),
+    (27.9, "revenue down forty-two percent,", 29.9),
+    (30.0, "North Star kills it, automatically, before it costs you more.", 33.9),
+    (34.1, "Then it ships the winner.", 35.6),
+    (35.7, "Thirty-five percent more signups, shipped in Statsig.", 39.3),
+    (39.6, "And it remembers what it learned, so the next test is smarter.", 42.9),
+    (43.1, "Built on Superlinked, Statsig, Amplitude, SingleStore, and Cognee.", 49.3),
+    (49.6, "Under a cent per experiment. A human approves every launch. Every decision is audited.", 54.4),
+    (54.7, "North Star. Ship experiments on autopilot.", 59.5),
 ]
 
-WHOOSH = [4.3, 12.9, 20.9, 29.9, 39.1, 51.9, 61.9, 67.9, 77.9]
-IMPACT = [8.0, 43.9, 84.0]
-CHIME = [56.3]
-CLICK = [35.6]
-TICKS = [68.3 + i * 0.65 for i in range(5)]
-RISERS = [(5.5, 8.0), (41.5, 43.9)]
+WHOOSH = [2.5, 4.7, 8.1, 12.7, 18.7, 24.9, 33.9, 39.4, 42.9, 49.4, 54.4]
+IMPACT = [4.8, 27.8, 54.5]
+CHIME = [35.6]
+CLICK = [22.8]
+TICKS = [43.2 + i * 0.62 for i in range(5)]
+RISERS = [(3.3, 4.8), (26.3, 27.8)]
+DRUMS_IN, HATS_IN, BREAK, OUTRO = 4.8, 8.2, (26.3, 27.8), 54.5
 
 
 def env(n, a=0.005, r=0.2):
@@ -92,19 +93,19 @@ def music(total, rng):
     t, i = 0.0, 0
     while t < total:
         c = pad_chord(chords[i % 4], bar * 2 + 0.6)
-        place(out, c * (0.55 if t < 8 else 1.0), t)
+        place(out, c * (0.55 if t < DRUMS_IN else 1.0), t)
         bass = lowpass(osc(chords[i % 4][0] / 2, bar * 2, "tri"), 8) * 0.22
-        if t >= 8:
+        if t >= DRUMS_IN:
             place(out, bass * np.minimum(1, np.arange(len(bass)) / (SR * 0.02)), t)
         t += bar * 2
         i += 1
     # drums from the logo reveal on, pause during the kill's suspense, full energy after
-    b = 8.0
+    b = DRUMS_IN
     while b < total - 2:
-        quiet = 40.5 <= b < 43.9 or b >= 84
+        quiet = BREAK[0] <= b < BREAK[1] or b >= OUTRO
         if not quiet:
             place(out, kick() * 0.8, b)
-            if b >= 13:
+            if b >= HATS_IN:
                 place(out, hat(rng), b + BEAT / 2)
         b += BEAT
     return out
@@ -164,7 +165,7 @@ def main(model, voices, video, out):
     kokoro = Kokoro(model, voices)
     voice = np.zeros(int(SR * (total + 1)))
     for start, text, end_by in NARRATION:
-        speed = 1.05
+        speed = 1.12
         for _ in range(4):
             samples, sr = kokoro.create(text, voice=VOICE, speed=speed, lang="en-us")
             length = len(samples) / SR

@@ -7,7 +7,7 @@ Statsig after a human approves, **kills any variant that starts losing money**, 
 remembers what it learned for next time. Every decision comes with the data, the model output and the
 cost behind it.
 
-**[▶ Watch the 90-second launch video](demo/northstar-launch.mp4)** · [full 2:40 walkthrough of a live, unedited run](demo/northstar-demo.mp4)
+**[▶ Watch the 60-second launch video](demo/northstar-launch.mp4)** · [full 2:40 walkthrough of a live, unedited run](demo/northstar-demo.mp4)
 
 ![North Star control room after a live run: the winner shipped and the stakeholder's variant killed](docs/dashboard.png)
 
