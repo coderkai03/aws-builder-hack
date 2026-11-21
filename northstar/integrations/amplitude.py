@@ -5,14 +5,16 @@ The agent's real-time stats run on the SingleStore mirror (Amplitude ingestion c
 TODO(teammate C): add a Dashboard REST API funnel query in `funnel_snapshot()` so the initial
 diagnosis is read straight out of Amplitude. https://amplitude.com/docs/apis/analytics/dashboard-rest
 """
-import threading
-
 import httpx
 
 from .. import config
+from ..store import store
 
 URL = "https://api2.amplitude.com/2/httpapi"
-sent = {"events": 0, "errors": 0}
+
+
+def sent() -> dict:
+    return {"events": int(store.get("amp_events", 0) or 0), "errors": int(store.get("amp_errors", 0) or 0)}
 
 
 def _send(events: list[dict]):
@@ -30,20 +32,20 @@ def _send(events: list[dict]):
         } for e in events],
     }
     try:
-        r = httpx.post(URL, json=payload, timeout=15)
+        r = httpx.post(URL, json=payload, timeout=8)
         if r.status_code == 200:
-            sent["events"] += len(events)
+            store.incr("amp_events", len(events))
         else:
-            sent["errors"] += 1
+            store.incr("amp_errors")
     except Exception:
-        sent["errors"] += 1
+        store.incr("amp_errors")
 
 
 def track(events: list[dict]):
     if not config.AMPLITUDE_API_KEY or not events:
         return
     for i in range(0, len(events), 1000):  # HTTP V2 batch limit headroom
-        threading.Thread(target=_send, args=(events[i:i + 1000],), daemon=True).start()
+        _send(events[i:i + 1000])  # synchronous: serverless hosts kill background threads
 
 
 def funnel_snapshot() -> dict | None:

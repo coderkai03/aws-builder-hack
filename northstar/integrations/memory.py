@@ -10,7 +10,6 @@ Cognee Cloud HTTP API (docs.cognee.ai/cognee-cloud/http-api): X-Api-Key auth,
   POST /api/v1/search   {"query", "search_type", "datasets"}
 """
 import json
-import threading
 import uuid
 
 import httpx
@@ -50,8 +49,7 @@ def remember_many(texts: list[str]):
     for t in texts:
         store.remember(t)
     if config.COGNEE_ENABLED and texts:
-        # cognify can take a while; never block the experiment loop on it
-        threading.Thread(target=_push, args=(texts,), daemon=True).start()
+        _push(texts)  # synchronous: serverless hosts kill background threads (cognify returns in seconds)
 
 
 def remember(text: str):

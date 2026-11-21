@@ -34,6 +34,16 @@ totals = {"calls": 0, "cost_usd": 0.0, "smart_calls": 0, "fast_calls": 0,
           "cost_if_all_smart_usd": 0.0, "smart_tokens": 0, "smart_cost": 0.0}
 
 
+def persisted_totals() -> dict:
+    """Model-call totals read back from the audit trail (survives serverless restarts)."""
+    rows = store.query("SELECT summary, cost_usd FROM audit WHERE actor = ? AND (summary LIKE ? OR summary LIKE ?)",
+                       ("agent", "[smart]%", "[fast]%"))
+    smart = sum(1 for r in rows if r["summary"].startswith("[smart]"))
+    cost = sum(float(r["cost_usd"] or 0) for r in rows)
+    return {"calls": len(rows), "smart_calls": smart, "fast_calls": len(rows) - smart, "cost_usd": cost,
+            "cost_if_all_smart_usd": cost}
+
+
 def client() -> anthropic.Anthropic:
     global _client
     if _client is None:

@@ -26,6 +26,8 @@ SCHEMA = [
         model VARCHAR(64), summary TEXT, detail_json TEXT, cost_usd DOUBLE, tokens INT)""",
     """CREATE TABLE IF NOT EXISTS memory (
         id VARCHAR(40) PRIMARY KEY, ts DOUBLE, text TEXT)""",
+    """CREATE TABLE IF NOT EXISTS settings (
+        k VARCHAR(64) PRIMARY KEY, v TEXT)""",
 ]
 
 
@@ -69,7 +71,7 @@ class Store:
             return [dict(zip(cols, r)) for r in cur.fetchall()]
 
     def reset(self):
-        for t in ("events", "experiments", "audit", "memory"):
+        for t in ("events", "experiments", "audit", "memory", "settings"):
             self._exec(f"DELETE FROM {t}")
 
     # -- events ----------------------------------------------------------------
@@ -148,6 +150,17 @@ class Store:
         for r in rows:
             r["detail"] = json.loads(r.pop("detail_json") or "{}")
         return rows
+
+    # -- settings: small JSON values that must survive across serverless invocations ------
+    def get(self, key: str, default=None):
+        rows = self.query("SELECT v FROM settings WHERE k = ?", (key,))
+        return json.loads(rows[0]["v"]) if rows else default
+
+    def set(self, key: str, value):
+        self._exec("REPLACE INTO settings (k, v) VALUES (?, ?)", (key, json.dumps(value)))
+
+    def incr(self, key: str, by: float = 1):
+        self.set(key, (self.get(key, 0) or 0) + by)
 
     # -- memory (local fallback for Cognee) ---------------------------------------
     def remember(self, text: str):

@@ -17,11 +17,6 @@ STATIC = Path(__file__).resolve().parent.parent / "static"
 app = FastAPI(title="North Star")
 
 
-@app.on_event("startup")
-def _startup():
-    agent.autopilot.start()
-
-
 @app.get("/")
 def dashboard():
     return FileResponse(STATIC / "dashboard.html")
@@ -46,13 +41,9 @@ def acme_config(user_id: str):
 
 
 # ---- simulator ---------------------------------------------------------------------
-class SimStart(BaseModel):
-    users_per_tick: int | None = None
-
-
 @app.post("/api/simulator/start")
-def sim_start(body: SimStart | None = None):
-    simulator.start(body.users_per_tick if body else None)
+def sim_start():
+    simulator.start()
     return {"running": True}
 
 
@@ -99,15 +90,23 @@ def reject(exp_id: str, body: Approval | None = None):
 
 @app.post("/api/reset")
 def reset():
-    simulator.stop()
-    store.reset()
-    agent.state["baseline_params"] = dict(product.CONTROL)
+    store.reset()  # also clears simulator state and the shipped baseline
     return {"ok": True}
 
 
 # ---- state for the dashboard (polled) ---------------------------------------------
+def _advance():
+    """Serverless-friendly heartbeat: each dashboard poll moves the simulation and the monitor forward."""
+    try:
+        simulator.catch_up()
+        agent.monitor_tick()
+    except Exception as e:  # never break the dashboard
+        store.audit("system", f"Tick error: {str(e)[:200]}", actor="system")
+
+
 @app.get("/api/state")
 def get_state():
+    _advance()
     exps = store.list_experiments()
     current = next((e for e in exps if e["status"] in ("running", "pending_approval")), exps[0] if exps else None)
     results = agent.experiment_results(current) if current and current["status"] != "pending_approval" else None
@@ -116,8 +115,8 @@ def get_state():
         "integrations": config.integration_status(),
         "store_backend": store.backend,
         "simulator": {"running": simulator.running, "total_users": simulator.total_users},
-        "amplitude": amplitude.sent,
-        "llm": llm.totals,
+        "amplitude": amplitude.sent(),
+        "llm": llm.persisted_totals(),
         "baseline": baseline,
         "baseline_steps": stats.step_conversion(baseline),
         "baseline_params": agent.state["baseline_params"],
@@ -167,10 +166,10 @@ def evidence():
         }
     except Exception as e:
         out["singlestore"] = {"error": str(e)[:200]}
-    out["amplitude"] = dict(amplitude.sent)
+    out["amplitude"] = amplitude.sent()
     if config.COGNEE_ENABLED:
         out["cognee"] = {"query": "What have past Acme experiments taught us?",
                          "answer": (memory.recall("What have past Acme experiments taught us?") or [""])[0]}
-    out["llm"] = {**llm.totals, "provider": config.llm_mode(),
+    out["llm"] = {**llm.persisted_totals(), "provider": config.llm_mode(),
                   "model": config.SUPERLINKED_SMART_MODEL if config.llm_mode() == "superlinked" else ""}
     return out

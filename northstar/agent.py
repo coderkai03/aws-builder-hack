@@ -18,7 +18,19 @@ from .integrations import memory, statsig
 from .store import store
 
 _lock = threading.Lock()
-state = {"baseline_params": dict(product.CONTROL), "ticks": 0}
+class _State:
+    """Agent state kept in the store, so it survives across serverless invocations."""
+    DEFAULTS = {"baseline_params": product.CONTROL, "ticks": 0}
+
+    def __getitem__(self, key):
+        val = store.get(f"agent_{key}")
+        return val if val is not None else json.loads(json.dumps(self.DEFAULTS[key]))
+
+    def __setitem__(self, key, value):
+        store.set(f"agent_{key}", value)
+
+
+state = _State()
 
 DECIDE_USERS_PER_ARM = max(config.MIN_USERS_PER_ARM * 3, 1200)  # earliest possible decision
 MAX_USERS_PER_ARM = 5000  # always decide by here
@@ -230,7 +242,7 @@ def monitor_tick() -> dict | None:
         exp = live_experiment()
         if not exp:
             return None
-        state["ticks"] += 1
+        state["ticks"] = state["ticks"] + 1
         res = experiment_results(exp)
         for name, c in res["comparisons"].items():
             if name in exp["killed"]:
@@ -320,25 +332,3 @@ def _decide(exp: dict, res: dict) -> dict:
     memory.remember_many(list(memo.learnings))
     store.audit("learn", f"Stored {len(memo.learnings)} learnings in memory", {"learnings": memo.learnings})
     return result
-
-
-# ---------------------------------------------------------------- autopilot ---------
-class Autopilot:
-    def __init__(self):
-        self.running = False
-
-    def _loop(self):
-        while self.running:
-            try:
-                monitor_tick()
-            except Exception as e:
-                print("monitor error:", e)
-            time.sleep(2)
-
-    def start(self):
-        if not self.running:
-            self.running = True
-            threading.Thread(target=self._loop, daemon=True).start()
-
-
-autopilot = Autopilot()

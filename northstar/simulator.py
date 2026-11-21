@@ -9,7 +9,6 @@ Built-in traps for the agent:
   * form_fields matters ~2.5x more on mobile -> rewards segment-aware diagnosis
 """
 import random
-import threading
 import time
 import uuid
 
@@ -59,19 +58,28 @@ def walk(params: dict, device: str, rng: random.Random) -> list[tuple[str, float
 
 
 class Simulator:
+    """Request-driven: every dashboard poll calls catch_up(), which generates the users that "arrived"
+    since the last tick. No background threads, so it runs the same locally and on serverless hosts."""
+    users_per_second = 400
+    max_users_per_tick = 2000
+
     def __init__(self):
-        self.running = False
-        self.users_per_tick = 400
-        self.tick_seconds = 1.0
-        self.total_users = 0
-        self._thread: threading.Thread | None = None
-        self._rng = random.Random(42)
+        self._rng = random.Random()
+
+    @property
+    def running(self) -> bool:
+        return bool(store.get("sim_running", False))
+
+    @property
+    def total_users(self) -> int:
+        return int(store.get("sim_total_users", 0) or 0)
 
     def generate(self, n: int) -> int:
         """Send n synthetic users through whatever experiment is live right now."""
         from .agent import live_experiment, state  # avoid import cycle
 
         exp = live_experiment()
+        baseline = state["baseline_params"]
         batch = []
         now = time.time()
         for _ in range(n):
@@ -81,34 +89,32 @@ class Simulator:
                 variant, params = statsig.assign(exp, user_id)
                 exp_id = exp["id"]
             else:
-                variant, params, exp_id = "control", state["baseline_params"], ""
+                variant, params, exp_id = "control", baseline, ""
             for event, value in walk(params, device, self._rng):
                 batch.append({"ts": now, "user_id": user_id, "experiment_id": exp_id, "variant": variant,
                               "device": device, "event": event, "value": value})
         store.insert_events(batch)
         amplitude.track(batch)
-        self.total_users += n
+        store.incr("sim_total_users", n)
         return n
 
-    def _loop(self):
-        while self.running:
-            try:
-                self.generate(self.users_per_tick)
-            except Exception as e:  # keep the demo alive
-                print("simulator error:", e)
-            time.sleep(self.tick_seconds)
+    def catch_up(self) -> int:
+        if not self.running:
+            return 0
+        now = time.time()
+        last = store.get("sim_last_tick", now)
+        n = min(int((now - last) * self.users_per_second), self.max_users_per_tick)
+        if n < 100:
+            return 0
+        store.set("sim_last_tick", now)
+        return self.generate(n)
 
-    def start(self, users_per_tick: int | None = None):
-        if users_per_tick:
-            self.users_per_tick = users_per_tick
-        if self.running:
-            return
-        self.running = True
-        self._thread = threading.Thread(target=self._loop, daemon=True)
-        self._thread.start()
+    def start(self):
+        store.set("sim_last_tick", time.time())
+        store.set("sim_running", True)
 
     def stop(self):
-        self.running = False
+        store.set("sim_running", False)
 
 
 simulator = Simulator()
