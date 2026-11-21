@@ -1,0 +1,1 @@
+window.RUN = {"mobile": "27.6", "desktop": "44.9", "killRevenue": -42.3, "killSignups": 18, "winLift": 35, "winP": 0.00018396867070345755, "cost": 0.0045, "events": 26570, "statsigId": "northstar_mobile_friction_reduction_4adf", "winner": "minimal_form"};
