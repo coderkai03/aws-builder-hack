@@ -13,7 +13,7 @@ to land within the first minute. Treat it as a **startup launch video**, not a c
    and move the camera to it: push-ins, pans, slight 3D tilt. Crop everything else.
 5. **Few words on screen, big type.** One short headline per beat. Put the key number huge and
    animate it (count up). If a sentence needs reading, it's too long.
-6. **One beat per idea, about 8–10 seconds each.** Number the beats ("01 · Diagnose") so the
+6. **One beat per idea, about 4–6 seconds each (the money moment gets ~9).** Number the beats ("01 · Diagnose") so the
    structure is obvious.
 7. **Lead with the money moment.** Give the most dramatic proof (here: the guardrail killing a
    variant) the longest beat, a flash, an impact sound and a pause in the music.
